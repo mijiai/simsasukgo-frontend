@@ -524,3 +524,124 @@ body {
 }
 .dept-select-trigger:hover:not(:disabled) { border-color: var(--teal); }
 .dept-select-trigger:disabled { cursor: not-allowed; opacity: 0.6; }
+
+/* ============================================================
+   Step 5 — Modal + management page
+   ============================================================ */
+
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1000;
+  animation: modal-fade 0.2s ease;
+}
+@keyframes modal-fade { from { opacity: 0; } to { opacity: 1; } }
+
+.modal-card {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  padding: 32px 36px;
+  width: 440px; max-width: 90vw;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  position: relative;
+  animation: modal-slide 0.25s ease;
+}
+@keyframes modal-slide {
+  from { transform: translateY(16px) scale(0.97); }
+  to   { transform: translateY(0) scale(1); }
+}
+
+.modal-title {
+  font-size: 18px; font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 24px;
+}
+.modal-close {
+  position: absolute; top: 16px; right: 16px;
+  width: 32px; height: 32px;
+  border: none; background: transparent;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-muted);
+  border-radius: 50%;
+  transition: background 0.15s;
+}
+.modal-close:hover { background: var(--main-bg); }
+
+.form-group { margin-bottom: 18px; }
+.form-label {
+  font-size: 13px; font-weight: 600; color: var(--text-primary);
+  margin-bottom: 7px; display: block;
+}
+.form-input {
+  width: 100%;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 10px 13px;
+  font-family: inherit; font-size: 13px;
+  color: var(--text-primary);
+  outline: none; transition: border-color 0.15s;
+  background: var(--white);
+}
+.form-input:focus {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px rgba(0, 196, 169, 0.12);
+}
+
+.modal-actions { display: flex; gap: 10px; margin-top: 28px; }
+.btn-cancel {
+  flex: 1; padding: 11px;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--white);
+  font-family: inherit; font-size: 13px; font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer; transition: all 0.15s;
+}
+.btn-cancel:hover:not(:disabled) { background: var(--main-bg); }
+.btn-cancel:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.btn-submit {
+  flex: 2; padding: 11px;
+  border: none; border-radius: var(--radius-sm);
+  background: var(--teal);
+  font-family: inherit; font-size: 13px; font-weight: 600;
+  color: white; cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: var(--shadow-btn);
+}
+.btn-submit:hover:not(:disabled) { background: var(--teal-hover); }
+.btn-submit:disabled { background: #9CA3AF; cursor: not-allowed; box-shadow: none; }
+
+/* ── Monitor card ── */
+.monitor-card {
+  display: flex; flex-direction: column;
+  border: 1px solid var(--border); border-radius: var(--radius-md);
+  background: var(--white); box-shadow: var(--shadow-card);
+  text-decoration: none; color: inherit;
+  overflow: hidden;
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+.monitor-card:hover {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+.monitor-card-head { padding: 16px 18px 14px; }
+.monitor-card-name {
+  font-size: 15px; font-weight: 700; color: var(--text-primary);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.monitor-card-divider { height: 1px; background: var(--border); }
+.monitor-card-body {
+  padding: 12px 18px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.monitor-row {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 12px; gap: 12px;
+}
+.monitor-row > span { color: var(--text-muted); flex-shrink: 0; }
+.monitor-row > strong {
+  color: var(--text-primary); font-weight: 600;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  min-width: 0;
+}

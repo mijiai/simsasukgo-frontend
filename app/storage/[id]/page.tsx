@@ -1,15 +1,18 @@
 'use client';
 
 import Link from 'next/link';
+import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useApp } from '../../lib/state';
 import { ResultView } from '../../components/ResultView';
 import { StorageEmptyState } from '../../components/StorageEmptyState';
+import { RegisterMonitorModal } from '../../components/RegisterMonitorModal';
 
 export default function StorageDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const { savedReports, deleteStoredReport } = useApp();
+  const [registerOpen, setRegisterOpen] = useState(false);
 
   const id = Number(params?.id);
   const report = Number.isFinite(id) ? savedReports.find((r) => r.id === id) : undefined;
@@ -78,20 +81,43 @@ export default function StorageDetailPage() {
         }}
       >
         <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>저장일: {report.date}</span>
-        <button
-          className="action-btn"
-          onClick={handleDelete}
-          style={{ color: '#EF4444', borderColor: '#FECACA' }}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="3 6 5 6 21 6" />
-            <path d="M19 6l-1 14H6L5 6" />
-            <path d="M10 11v6M14 11v6" />
-            <path d="M9 6V4h6v2" />
-          </svg>
-          삭제
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            className="action-btn"
+            onClick={() => setRegisterOpen(true)}
+            disabled={!report.jobId || !report.companyId}
+            title={!report.jobId ? '분석 메타가 없어 등록 불가' : ''}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 11l3 3L22 4" />
+              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+            </svg>
+            사후관리 등록
+          </button>
+          <button
+            className="action-btn"
+            onClick={handleDelete}
+            style={{ color: '#EF4444', borderColor: '#FECACA' }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="3 6 5 6 21 6" />
+              <path d="M19 6l-1 14H6L5 6" />
+              <path d="M10 11v6M14 11v6" />
+              <path d="M9 6V4h6v2" />
+            </svg>
+            삭제
+          </button>
+        </div>
       </div>
+
+      <RegisterMonitorModal
+        open={registerOpen}
+        onClose={() => setRegisterOpen(false)}
+        saved={report}
+        onSuccess={() =>
+          alert('사후관리에 등록되었습니다. 사이드바 "사후관리"에서 확인할 수 있어요.')
+        }
+      />
     </main>
   );
 }
