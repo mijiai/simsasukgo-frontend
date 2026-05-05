@@ -41,3 +41,6 @@ yarn-error.log*
 # IDE
 .vscode/
 .idea/
+
+# step prompts (local task specs, not committed)
+/prompt/
