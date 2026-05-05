@@ -77,7 +77,7 @@ export default function StorageDetailPage() {
         </button>
       </div>
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: '0 28px 14px', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 28px 14px', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         <ResultView saved={report} collect={null} />
       </div>
 
