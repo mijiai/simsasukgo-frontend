@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import { useRef, useState } from 'react';
-import { log } from '../lib/log';
+import { useApp } from '../lib/state';
 
 interface AttachedFile {
   name: string;
@@ -15,6 +15,7 @@ const SEARCH_TYPES = ['기업명', '사업자번호', '법인번호'] as const;
 type SearchType = (typeof SEARCH_TYPES)[number];
 
 export function HomeForm() {
+  const { startAnalysis } = useApp();
   const [type, setType] = useState<SearchType>('기업명');
   const [company, setCompany] = useState('');
   const [memo, setMemo] = useState('');
@@ -56,13 +57,11 @@ export function HomeForm() {
 
   const handleSend = () => {
     if (!canSend) return;
-    // Step 1: stub. Step 2 will wire this to the analysis pipeline.
-    log('[Step 1] 분석 요청 (아직 미연결)', {
-      company: company.trim(),
-      memo: memo.trim(),
-      files: files.map((f) => ({ name: f.name, type: f.type, size: f.size })),
-    });
-    alert('분석 요청 흐름은 다음 단계(Step 2)에서 연결됩니다.');
+    startAnalysis(
+      company.trim(),
+      memo.trim(),
+      files.map((f) => f.name)
+    );
   };
 
   return (
