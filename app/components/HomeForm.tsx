@@ -60,7 +60,7 @@ export function HomeForm() {
     startAnalysis(
       company.trim(),
       memo.trim(),
-      files.map((f) => f.name)
+      files.map((f) => f.file)
     );
   };
 
@@ -274,7 +274,7 @@ export function HomeForm() {
       </div>
 
       <p style={{ marginTop: 16, fontSize: 11.5, color: 'var(--text-muted)', textAlign: 'center' }}>
-        입력 정보를 바탕으로 심사숙고 AI가 분석을 시작합니다.
+        입력 정보와 첨부 자료를 바탕으로 심사숙고 AI가 분석을 시작합니다.
       </p>
     </div>
   );

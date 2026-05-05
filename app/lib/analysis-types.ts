@@ -44,3 +44,16 @@ export interface ReportGenerateResponse {
   docx_url: string;
   docx_blob_path: string;
 }
+
+export interface CreateUploadUrlResponse {
+  upload_url: string;
+  blob_path: string;
+  required_headers: Record<string, string>;
+  expires_at: string;
+}
+
+export interface CreateAnalysisJobRequestBody {
+  companyName: string;
+  customPrompt?: string;
+  fileBlobPaths?: string[];
+}
