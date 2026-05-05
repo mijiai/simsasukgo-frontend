@@ -63,6 +63,18 @@ export default function StorageDetailPage() {
           {report.dept && <span className="dept-tag">{report.dept}</span>}
           <span className={`risk-pill ${report.riskLevel}`}>{report.riskLevel}</span>
         </div>
+        <button
+          className="teal-btn"
+          onClick={() => setRegisterOpen(true)}
+          disabled={!report.jobId || !report.companyId}
+          title={!report.jobId ? '분석 메타가 없어 등록 불가' : ''}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+          모니터링 추가
+        </button>
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '0 28px 14px', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
@@ -81,33 +93,19 @@ export default function StorageDetailPage() {
         }}
       >
         <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>저장일: {report.date}</span>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button
-            className="action-btn"
-            onClick={() => setRegisterOpen(true)}
-            disabled={!report.jobId || !report.companyId}
-            title={!report.jobId ? '분석 메타가 없어 등록 불가' : ''}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 11l3 3L22 4" />
-              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
-            </svg>
-            사후관리 등록
-          </button>
-          <button
-            className="action-btn"
-            onClick={handleDelete}
-            style={{ color: '#EF4444', borderColor: '#FECACA' }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="3 6 5 6 21 6" />
-              <path d="M19 6l-1 14H6L5 6" />
-              <path d="M10 11v6M14 11v6" />
-              <path d="M9 6V4h6v2" />
-            </svg>
-            삭제
-          </button>
-        </div>
+        <button
+          className="action-btn"
+          onClick={handleDelete}
+          style={{ color: '#EF4444', borderColor: '#FECACA' }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="3 6 5 6 21 6" />
+            <path d="M19 6l-1 14H6L5 6" />
+            <path d="M10 11v6M14 11v6" />
+            <path d="M9 6V4h6v2" />
+          </svg>
+          삭제
+        </button>
       </div>
 
       <RegisterMonitorModal
