@@ -3,6 +3,8 @@
 import Image from 'next/image';
 import { useRef, useState } from 'react';
 import { useApp } from '../lib/state';
+import { DepartmentSelect } from './DepartmentSelect';
+import type { Department } from '../lib/departments';
 
 interface AttachedFile {
   name: string;
@@ -20,6 +22,7 @@ export function HomeForm() {
   const [company, setCompany] = useState('');
   const [memo, setMemo] = useState('');
   const [files, setFiles] = useState<AttachedFile[]>([]);
+  const [dept, setDept] = useState<Department | ''>('');
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -57,11 +60,12 @@ export function HomeForm() {
 
   const handleSend = () => {
     if (!canSend) return;
-    startAnalysis(
-      company.trim(),
-      memo.trim(),
-      files.map((f) => f.file)
-    );
+    startAnalysis({
+      companyName: company.trim(),
+      customPrompt: memo.trim(),
+      files: files.map((f) => f.file),
+      dept,
+    });
   };
 
   return (
@@ -223,6 +227,15 @@ export function HomeForm() {
             ))}
           </div>
         )}
+
+        <div className="home-form-row">
+          <label className="home-form-row-label">부서</label>
+          <DepartmentSelect
+            value={dept}
+            onChange={setDept}
+            placeholder="부서 선택 (선택)"
+          />
+        </div>
 
         <div style={{ position: 'relative' }}>
           <textarea

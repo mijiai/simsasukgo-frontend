@@ -57,6 +57,7 @@ export default function StorageDetailPage() {
           <span className="topbar-title" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {report.name}
           </span>
+          {report.dept && <span className="dept-tag">{report.dept}</span>}
           <span className={`risk-pill ${report.riskLevel}`}>{report.riskLevel}</span>
         </div>
       </div>

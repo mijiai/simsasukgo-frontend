@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { logError } from './log';
 import { riskMeta } from './risk';
 import { uploadFilesSequentially } from './upload';
+import type { Department } from './departments';
 import type {
   RiskLevel,
   CreateAnalysisJobResponse,
@@ -90,6 +91,13 @@ type AnalysisRunUpdater =
   | null
   | ((prev: AnalysisRun | null) => AnalysisRun | null);
 
+export interface StartAnalysisInput {
+  companyName: string;
+  customPrompt: string;
+  files: File[];
+  dept?: Department | '';
+}
+
 interface AppContextValue {
   analysisRun: AnalysisRun | null;
   savedReports: SavedReport[];
@@ -97,7 +105,7 @@ interface AppContextValue {
   setSavedReports: (
     updater: SavedReport[] | ((prev: SavedReport[]) => SavedReport[])
   ) => void;
-  startAnalysis: (companyName: string, customPrompt: string, files: File[]) => void;
+  startAnalysis: (input: StartAnalysisInput) => void;
   deleteStoredReport: (id: number) => void;
 }
 
@@ -145,7 +153,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const startAnalysis = useCallback(
-    (companyName: string, customPrompt: string, files: File[]) => {
+    (input: StartAnalysisInput) => {
+      const { companyName, customPrompt, files } = input;
+      const dept = input.dept || '';
       const runId = Date.now();
       const hasFiles = files.length > 0;
       const fileNames = files.map((f) => f.name);
@@ -227,7 +237,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             companyId: job.company_id,
             name: companyName,
             customPrompt,
-            dept: '',
+            dept,
             rating: meta.rating,
             ratingName: meta.ratingName,
             riskLevel: analysis.risk_level,

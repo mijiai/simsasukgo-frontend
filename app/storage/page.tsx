@@ -5,27 +5,22 @@ import { useState, useMemo } from 'react';
 import { useApp } from '../lib/state';
 import { StorageCard } from '../components/StorageCard';
 import { StorageEmptyState } from '../components/StorageEmptyState';
-import type { RiskLevel } from '../lib/analysis-types';
+import { DEPARTMENTS, type DepartmentFilter } from '../lib/departments';
 
-type Filter = 'ALL' | RiskLevel;
-
-const FILTERS: { key: Filter; label: string }[] = [
-  { key: 'ALL',      label: '전체' },
-  { key: 'LOW',      label: '저위험' },
-  { key: 'MEDIUM',   label: '중간 위험' },
-  { key: 'HIGH',     label: '고위험' },
-  { key: 'CRITICAL', label: '매우 위험' },
+const FILTERS: { key: DepartmentFilter; label: string }[] = [
+  { key: 'ALL', label: '전체' },
+  ...DEPARTMENTS.map((d) => ({ key: d, label: d })),
 ];
 
 export default function StoragePage() {
   const { savedReports } = useApp();
-  const [filter, setFilter] = useState<Filter>('ALL');
+  const [filter, setFilter] = useState<DepartmentFilter>('ALL');
   const [query, setQuery] = useState('');
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return savedReports.filter((r) => {
-      if (filter !== 'ALL' && r.riskLevel !== filter) return false;
+      if (filter !== 'ALL' && r.dept !== filter) return false;
       if (q && !r.name.toLowerCase().includes(q)) return false;
       return true;
     });

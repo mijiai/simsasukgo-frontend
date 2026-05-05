@@ -487,3 +487,40 @@ body {
   border-bottom-color: var(--text-primary);
   font-weight: 600;
 }
+
+/* ============================================================
+   Step 4.1 — Department tag + home form row + dept select
+   ============================================================ */
+
+.dept-tag {
+  display: inline-flex; align-items: center;
+  padding: 4px 11px;
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  border-radius: 20px;
+  font-size: 12px; font-weight: 500;
+  color: #444; background: rgba(255, 255, 255, 0.55);
+  white-space: nowrap;
+}
+
+.home-form-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 18px;
+  border-top: 1px solid var(--border);
+}
+.home-form-row-label {
+  font-size: 12.5px; font-weight: 500;
+  color: var(--text-secondary);
+  white-space: nowrap; flex-shrink: 0;
+}
+
+.dept-select-wrap { position: relative; flex: 1; }
+.dept-select-trigger {
+  display: flex; align-items: center; justify-content: space-between;
+  width: 100%; padding: 8px 12px;
+  background: var(--white);
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  font-family: inherit; font-size: 13px;
+  cursor: pointer; transition: border-color 0.15s;
+}
+.dept-select-trigger:hover:not(:disabled) { border-color: var(--teal); }
+.dept-select-trigger:disabled { cursor: not-allowed; opacity: 0.6; }

@@ -11,7 +11,10 @@ export function StorageCard({ report }: { report: SavedReport }) {
       <div className="storage-card-head">
         <div className="storage-card-name-col">
           <span className="storage-card-name">{report.name}</span>
-          <span className={`risk-pill ${report.riskLevel}`}>{report.riskLevel}</span>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            <span className={`risk-pill ${report.riskLevel}`}>{report.riskLevel}</span>
+            {report.dept && <span className="dept-tag">{report.dept}</span>}
+          </div>
         </div>
         <div className={`risk-badge-lg ${report.riskLevel} sm`}>{report.rating}</div>
       </div>
