@@ -12,7 +12,16 @@ import type {
   CollectCompanyDataResponse,
   AnalyzeFinancialsResponse,
   ReportGenerateResponse,
+  GetAnalysisJobDetailResponse,
 } from './analysis-types';
+import {
+  analyzeSummaryToAnalyzeResponse,
+  collectSummaryToCollectResponse,
+  detailToReportResponse,
+  isRecoverableError,
+  pollJobUntilDone,
+  withTimeout,
+} from './poll-job';
 
 export type { RiskLevel };
 
@@ -124,6 +133,94 @@ async function postJSON<T>(path: string, body: unknown): Promise<T> {
   return (await res.json()) as T;
 }
 
+// =============================================================
+// Recovery wrappers — Vercel cap (Hobby 60s) can clip long MCP calls.
+// We abort ~50s in and poll get_analysis_job_detail until the relevant stage
+// is persisted by the backend, then synthesize the per-stage response shape.
+// =============================================================
+
+type StepUpdater = (key: StepKey, partial: Partial<PipelineStep>) => void;
+
+async function runCollectWithRecovery(
+  jobId: string,
+  companyName: string,
+  updateStep: StepUpdater
+): Promise<CollectCompanyDataResponse> {
+  try {
+    return await withTimeout(
+      postJSON<CollectCompanyDataResponse>('/api/mcp/collect', { jobId, companyName }),
+      50_000
+    );
+  } catch (err) {
+    if (!isRecoverableError(err)) throw err;
+    updateStep('collect', { desc: '데이터 수집 결과를 기다리는 중...' });
+    const detail = await pollJobUntilDone(
+      jobId,
+      (path, body) => postJSON<GetAnalysisJobDetailResponse>(path, body),
+      {
+        intervalMs: 4_000,
+        maxAttempts: 30,
+        isComplete: (d) => d.collect != null,
+      }
+    );
+    return collectSummaryToCollectResponse(jobId, detail);
+  }
+}
+
+async function runAnalyzeWithRecovery(
+  jobId: string,
+  updateStep: StepUpdater
+): Promise<AnalyzeFinancialsResponse> {
+  try {
+    return await withTimeout(
+      postJSON<AnalyzeFinancialsResponse>('/api/mcp/analyze', { jobId }),
+      50_000
+    );
+  } catch (err) {
+    if (!isRecoverableError(err)) throw err;
+    updateStep('analyze', { desc: '재무 분석 결과를 기다리는 중...' });
+    const detail = await pollJobUntilDone(
+      jobId,
+      (path, body) => postJSON<GetAnalysisJobDetailResponse>(path, body),
+      {
+        intervalMs: 4_000,
+        maxAttempts: 30,
+        isComplete: (d) => d.analyze != null,
+      }
+    );
+    return analyzeSummaryToAnalyzeResponse(jobId, detail);
+  }
+}
+
+async function runReportWithRecovery(
+  jobId: string,
+  updateStep: StepUpdater
+): Promise<ReportGenerateResponse> {
+  try {
+    return await withTimeout(
+      postJSON<ReportGenerateResponse>('/api/mcp/report', { jobId }),
+      50_000
+    );
+  } catch (err) {
+    if (!isRecoverableError(err)) throw err;
+    updateStep('report', { desc: '보고서 생성이 길어지고 있어요. 결과를 기다리는 중...' });
+    const detail = await pollJobUntilDone(
+      jobId,
+      (path, body) => postJSON<GetAnalysisJobDetailResponse>(path, body),
+      {
+        intervalMs: 5_000,
+        maxAttempts: 36,
+        onProgress: (d) => {
+          if (d.report?.md_url) {
+            updateStep('report', { desc: '보고서 생성 거의 완료' });
+          }
+        },
+      }
+    );
+    return detailToReportResponse(detail);
+  }
+}
+
 export function AppProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [analysisRun, setAnalysisRunState] = useState<AnalysisRun | null>(null);
@@ -212,22 +309,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
           updateStep('create', { status: 'done' });
 
           updateStep('collect', { status: 'running' });
-          const collect = await postJSON<CollectCompanyDataResponse>('/api/mcp/collect', {
-            jobId: job.job_id,
-            companyName,
-          });
+          const collect = await runCollectWithRecovery(job.job_id, companyName, updateStep);
           updateStep('collect', { status: 'done' });
 
           updateStep('analyze', { status: 'running' });
-          const analysis = await postJSON<AnalyzeFinancialsResponse>('/api/mcp/analyze', {
-            jobId: job.job_id,
-          });
+          const analysis = await runAnalyzeWithRecovery(job.job_id, updateStep);
           updateStep('analyze', { status: 'done' });
 
           updateStep('report', { status: 'running' });
-          const report = await postJSON<ReportGenerateResponse>('/api/mcp/report', {
-            jobId: job.job_id,
-          });
+          const report = await runReportWithRecovery(job.job_id, updateStep);
           updateStep('report', { status: 'done' });
 
           const meta = riskMeta(analysis.risk_level);

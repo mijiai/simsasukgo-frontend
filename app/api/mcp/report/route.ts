@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { callMCPTool, MCPCallError } from '@/app/lib/mcp';
 
 export const runtime = 'nodejs';
+// report_generate는 Sonnet 4.6 8K max_tokens 9개 섹션 + DOCX 빌드 + Blob 업로드로
+// 정상 80-120s. Hobby plan(60s cap)에선 종종 504가 나지만, 클라이언트가
+// get_analysis_job_detail 폴링으로 결과를 회수하므로(app/lib/poll-job.ts) 함수가
+// 잘려도 파이프라인은 복구된다. Pro plan이면 maxDuration 상향으로 직접 호출
+// 성공률을 높일 수 있음.
 export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
