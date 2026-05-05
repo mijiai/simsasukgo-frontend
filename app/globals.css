@@ -386,3 +386,141 @@ body {
 .dl-arrow { color: var(--text-muted); flex-shrink: 0; }
 
 .muted-note { font-size: 11.5px; color: var(--text-muted); }
+
+/* ============================================================
+   Step 4 — Storage list / detail
+   ============================================================ */
+
+.storage-search {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--white); border: 1px solid var(--border);
+  border-radius: var(--radius-md); padding: 10px 14px;
+  box-shadow: var(--shadow-card);
+  color: var(--text-muted);
+}
+.storage-search input {
+  flex: 1; border: none; outline: none; background: transparent;
+  font-family: inherit; font-size: 13px; color: var(--text-primary);
+}
+.storage-search input::placeholder { color: var(--text-muted); }
+
+.storage-panel {
+  background: var(--white); border: 1px solid var(--border);
+  border-radius: var(--radius-md); box-shadow: var(--shadow-card);
+  overflow: hidden; flex: 1;
+  display: flex; flex-direction: column; min-height: 0;
+}
+
+.storage-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+  padding: 16px; overflow-y: auto; flex: 1;
+}
+@media (max-width: 1100px) { .storage-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 720px)  { .storage-grid { grid-template-columns: 1fr; } }
+
+/* ── Storage card ── */
+.storage-card {
+  display: flex; flex-direction: column;
+  border: 1px solid var(--border); border-radius: var(--radius-md);
+  background: var(--white); box-shadow: var(--shadow-card);
+  text-decoration: none; color: inherit;
+  transition: box-shadow 0.2s, transform 0.2s;
+  overflow: hidden;
+}
+.storage-card:hover {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+.storage-card-head {
+  padding: 16px 18px 14px;
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;
+}
+.storage-card-name-col {
+  display: flex; flex-direction: column; gap: 6px; min-width: 0;
+}
+.storage-card-name {
+  font-size: 15px; font-weight: 700; color: var(--text-primary);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.storage-card-divider { height: 1px; background: var(--border); }
+.storage-card-body {
+  padding: 12px 18px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.storage-card-row {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 12px;
+}
+.storage-card-row > span { color: var(--text-muted); }
+.storage-card-row > strong { color: var(--text-primary); font-weight: 600; }
+.storage-card-foot {
+  padding: 10px 18px; border-top: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 11.5px; color: var(--text-muted);
+}
+.storage-card-cta {
+  display: flex; align-items: center; gap: 4px;
+  color: var(--teal); font-weight: 600;
+}
+
+/* Smaller risk-badge variant for storage cards */
+.risk-badge-lg.sm {
+  width: 40px; height: 40px; font-size: 15px;
+}
+
+/* Filter tabs (used by storage list) */
+.filter-tabs {
+  display: flex; padding: 0 16px;
+  border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.filter-tab {
+  padding: 12px 16px; font-size: 13px; font-weight: 500;
+  color: var(--text-muted); cursor: pointer;
+  border: none; border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  background: none; font-family: inherit;
+  transition: all 0.18s; white-space: nowrap;
+}
+.filter-tab:hover { color: var(--text-secondary); }
+.filter-tab.active {
+  color: var(--text-primary);
+  border-bottom-color: var(--text-primary);
+  font-weight: 600;
+}
+
+/* ============================================================
+   Step 4.1 — Department tag + home form row + dept select
+   ============================================================ */
+
+.dept-tag {
+  display: inline-flex; align-items: center;
+  padding: 4px 11px;
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  border-radius: 20px;
+  font-size: 12px; font-weight: 500;
+  color: #444; background: rgba(255, 255, 255, 0.55);
+  white-space: nowrap;
+}
+
+.home-form-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 18px;
+  border-top: 1px solid var(--border);
+}
+.home-form-row-label {
+  font-size: 12.5px; font-weight: 500;
+  color: var(--text-secondary);
+  white-space: nowrap; flex-shrink: 0;
+}
+
+.dept-select-wrap { position: relative; flex: 1; }
+.dept-select-trigger {
+  display: flex; align-items: center; justify-content: space-between;
+  width: 100%; padding: 8px 12px;
+  background: var(--white);
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  font-family: inherit; font-size: 13px;
+  cursor: pointer; transition: border-color 0.15s;
+}
+.dept-select-trigger:hover:not(:disabled) { border-color: var(--teal); }
+.dept-select-trigger:disabled { cursor: not-allowed; opacity: 0.6; }
