@@ -678,3 +678,70 @@ body {
   flex-wrap: wrap;
   flex-shrink: 0;
 }
+
+/* ── Markdown prose (보고서 본문 탭) ── */
+.md-prose {
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--text-primary);
+}
+.md-prose > :first-child { margin-top: 0; }
+.md-prose > :last-child { margin-bottom: 0; }
+.md-prose h1 { font-size: 22px; font-weight: 700; margin: 28px 0 14px; letter-spacing: -0.3px; }
+.md-prose h2 { font-size: 18px; font-weight: 700; margin: 24px 0 12px; letter-spacing: -0.2px; }
+.md-prose h3 { font-size: 15px; font-weight: 700; margin: 20px 0 10px; }
+.md-prose h4 { font-size: 14px; font-weight: 700; margin: 18px 0 8px; }
+.md-prose h1, .md-prose h2 {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
+}
+.md-prose p { margin: 0 0 14px; }
+.md-prose strong { font-weight: 700; color: var(--text-primary); }
+.md-prose em { color: var(--text-primary); }
+.md-prose ul, .md-prose ol { margin: 0 0 14px; padding-left: 22px; }
+.md-prose li { margin-bottom: 4px; }
+.md-prose blockquote {
+  border-left: 3px solid var(--teal);
+  padding: 6px 14px;
+  margin: 0 0 14px;
+  color: var(--text-secondary);
+  background: var(--teal-light);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+.md-prose code {
+  font-family: 'SFMono-Regular', Menlo, Monaco, Consolas, monospace;
+  font-size: 0.92em;
+  background: #F3F4F6;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.md-prose pre {
+  background: #F3F4F6;
+  padding: 14px 16px;
+  border-radius: var(--radius-sm);
+  overflow-x: auto;
+  margin: 0 0 14px;
+}
+.md-prose pre code { background: transparent; padding: 0; font-size: 13px; }
+.md-prose a { color: var(--teal); text-decoration: underline; }
+.md-prose a:hover { color: var(--teal-hover); }
+.md-prose hr {
+  border: none; border-top: 1px solid var(--border);
+  margin: 24px 0;
+}
+.md-prose table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0 0 14px;
+  font-size: 13px;
+}
+.md-prose th, .md-prose td {
+  border: 1px solid var(--border);
+  padding: 8px 12px;
+  text-align: left;
+}
+.md-prose th {
+  background: #FAFAFA;
+  font-weight: 600;
+}
+.md-prose img { max-width: 100%; height: auto; border-radius: var(--radius-sm); }

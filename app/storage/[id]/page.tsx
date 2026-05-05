@@ -63,18 +63,52 @@ export default function StorageDetailPage() {
           {report.dept && <span className="dept-tag">{report.dept}</span>}
           <span className={`risk-pill ${report.riskLevel}`}>{report.riskLevel}</span>
         </div>
-        <button
-          className="teal-btn"
-          onClick={() => setRegisterOpen(true)}
-          disabled={!report.jobId || !report.companyId}
-          title={!report.jobId ? '분석 메타가 없어 등록 불가' : ''}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
-          모니터링 추가
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {report.docxUrl && (
+            <a
+              className="action-btn"
+              href={report.docxUrl}
+              target="_blank"
+              rel="noopener"
+              title="DOCX 다운로드 (7일 만료)"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              DOCX
+            </a>
+          )}
+          {report.reportUrl && (
+            <a
+              className="action-btn"
+              href={report.reportUrl}
+              target="_blank"
+              rel="noopener"
+              title="Markdown 다운로드 (7일 만료)"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              MD
+            </a>
+          )}
+          <button
+            className="teal-btn"
+            onClick={() => setRegisterOpen(true)}
+            disabled={!report.jobId || !report.companyId}
+            title={!report.jobId ? '분석 메타가 없어 등록 불가' : ''}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            모니터링 추가
+          </button>
+        </div>
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px 28px 14px', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
