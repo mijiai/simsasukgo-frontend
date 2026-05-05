@@ -88,3 +88,68 @@ export interface ListAnalysisJobsResponse {
   limit: number;
   offset: number;
 }
+
+export type AgentStatusValue =
+  | 'idle'
+  | 'running'
+  | 'done'
+  | 'failed';
+
+export interface AgentStatusItem {
+  agent_name: AgentName;
+  status: AgentStatusValue;
+  started_at: string | null;
+  finished_at: string | null;
+  duration_sec: number | null;
+  output_blob_path: string | null;
+  error_detail: string | null;
+}
+
+export interface CollectSummary {
+  news_count: number;
+  lawsuit_count: number;
+  extracted_table_count: number;
+  extracted_image_count: number;
+  extracted_doc_count: number;
+  financial_years: number[];
+  has_internal_credit_data: boolean;
+  uploaded_files: string[];
+}
+
+export interface AnalyzeSummary {
+  risk_level: RiskLevel | null;
+  risk_score: number | null;
+  summary: string | null;
+  key_risk_factors: string[];
+  positive_signals: string[];
+  data_gaps: string[];
+  section_insights_count: number;
+  model: string | null;
+  analyzed_at: string | null;
+}
+
+export interface ReportArtifacts {
+  md_url: string | null;
+  md_blob_path: string | null;
+  docx_url: string | null;
+  docx_blob_path: string | null;
+}
+
+export interface GetAnalysisJobDetailResponse {
+  job_id: string;
+  company_id: string | null;
+  company_name: string;
+  user_id: string | null;
+  status: JobStatus;
+  custom_prompt: string | null;
+  created_at: string;
+  updated_at: string;
+  finished_at: string | null;
+  error_message: string | null;
+  risk_level: RiskLevel | null;
+  current_agent: AgentName | null;
+  agents: AgentStatusItem[];
+  collect: CollectSummary | null;
+  analyze: AnalyzeSummary | null;
+  report: ReportArtifacts | null;
+}

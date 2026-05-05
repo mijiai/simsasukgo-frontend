@@ -1,42 +1,89 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useEffect, useMemo, useState } from 'react';
+import { useParams } from 'next/navigation';
 import { useApp } from '../../lib/state';
+import type { SavedReport } from '../../lib/state';
+import type {
+  GetAnalysisJobDetailResponse,
+  CollectCompanyDataResponse,
+} from '../../lib/analysis-types';
 import { ResultView } from '../../components/ResultView';
 import { StorageEmptyState } from '../../components/StorageEmptyState';
 import { RegisterMonitorModal } from '../../components/RegisterMonitorModal';
+import { riskMeta } from '../../lib/risk';
+import { logError } from '../../lib/log';
 
 export default function StorageDetailPage() {
   const params = useParams<{ id: string }>();
-  const router = useRouter();
-  const { savedReports, deleteStoredReport } = useApp();
+  const { savedReports } = useApp();
   const [registerOpen, setRegisterOpen] = useState(false);
 
-  // The route param is now the backend job_id (UUID). Look it up in the
-  // current session's savedReports by jobId. Older numeric ids from before
-  // this change still match via fallback.
-  const idParam = params?.id || '';
-  const report = savedReports.find(
-    (r) => r.jobId === idParam || String(r.id) === idParam
-  );
+  const jobId = params?.id || '';
 
-  if (!report) {
+  const [detail, setDetail] = useState<GetAnalysisJobDetailResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!jobId) return;
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch('/api/mcp/get-analysis-job-detail', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ jobId }),
+        });
+        if (!res.ok) {
+          const j = (await res.json().catch(() => ({}))) as { error?: string };
+          throw new Error(j.error || `HTTP ${res.status}`);
+        }
+        const data = (await res.json()) as GetAnalysisJobDetailResponse;
+        if (!cancelled) setDetail(data);
+      } catch (err) {
+        logError('get_analysis_job_detail failed', err);
+        if (!cancelled) setError(err instanceof Error ? err.message : '조회 실패');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [jobId]);
+
+  // Best-effort: dept only known for jobs analyzed in current session.
+  const dept = useMemo(() => {
+    const m = savedReports.find((r) => r.jobId === jobId);
+    return m?.dept || '';
+  }, [savedReports, jobId]);
+
+  const adapted = useMemo(() => buildAdapters(detail, dept), [detail, dept]);
+
+  if (loading) {
     return (
       <main className="main">
-        <div className="topbar">
-          <Link href="/storage" aria-label="보관함으로" style={{ marginRight: 10, color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="15 18 9 12 15 6" />
-            </svg>
-          </Link>
-          <span className="topbar-title">보관함</span>
+        <BackTopbar title="보관함" />
+        <div className="empty-panel" style={{ flex: 1 }}>
+          <div className="spinner" />
+          <p>불러오는 중...</p>
         </div>
+      </main>
+    );
+  }
+
+  if (error || !detail) {
+    return (
+      <main className="main">
+        <BackTopbar title="보관함" />
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 28 }}>
           <StorageEmptyState
-            title="이 보고서의 본문은 표시할 수 없어요."
-            hint="현 브라우저 세션에서 분석한 보고서만 본문을 볼 수 있습니다. 다른 세션에서 만든 보고서를 보려면 백엔드의 분석 상세 도구가 추가되어야 합니다."
+            title="보고서를 불러오지 못했어요."
+            hint={error || '잠시 후 다시 시도해주세요.'}
             cta={
               <Link href="/storage" className="teal-btn" style={{ marginTop: 8 }}>
                 보관함으로
@@ -48,11 +95,30 @@ export default function StorageDetailPage() {
     );
   }
 
-  const handleDelete = () => {
-    if (!confirm(`"${report.name}" 보고서를 삭제할까요? 이 작업은 되돌릴 수 없어요.`)) return;
-    deleteStoredReport(report.id);
-    router.push('/storage');
-  };
+  if (detail.status !== 'done' || !adapted) {
+    return (
+      <main className="main">
+        <BackTopbar title={detail.company_name} />
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 28 }}>
+          <StorageEmptyState
+            title={detail.status === 'failed' ? '분석에 실패한 보고서예요.' : '아직 분석이 진행 중이에요.'}
+            hint={
+              detail.status === 'failed'
+                ? detail.error_message || '잠시 후 다시 시도해주세요.'
+                : `현재 단계: ${detail.current_agent || '시작 대기'}`
+            }
+            cta={
+              <Link href="/storage" className="teal-btn" style={{ marginTop: 8 }}>
+                보관함으로
+              </Link>
+            }
+          />
+        </div>
+      </main>
+    );
+  }
+
+  const { saved, collect } = adapted;
 
   return (
     <main className="main">
@@ -68,16 +134,16 @@ export default function StorageDetailPage() {
             </svg>
           </Link>
           <span className="topbar-title" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {report.name}
+            {saved.name}
           </span>
-          {report.dept && <span className="dept-tag">{report.dept}</span>}
-          <span className={`risk-pill ${report.riskLevel}`}>{report.riskLevel}</span>
+          {saved.dept && <span className="dept-tag">{saved.dept}</span>}
+          <span className={`risk-pill ${saved.riskLevel}`}>{saved.riskLevel}</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {report.docxUrl && (
+          {saved.docxUrl && (
             <a
               className="action-btn"
-              href={report.docxUrl}
+              href={saved.docxUrl}
               target="_blank"
               rel="noopener"
               title="DOCX 다운로드 (7일 만료)"
@@ -90,10 +156,10 @@ export default function StorageDetailPage() {
               DOCX
             </a>
           )}
-          {report.reportUrl && (
+          {saved.reportUrl && (
             <a
               className="action-btn"
-              href={report.reportUrl}
+              href={saved.reportUrl}
               target="_blank"
               rel="noopener"
               title="Markdown 다운로드 (7일 만료)"
@@ -109,8 +175,8 @@ export default function StorageDetailPage() {
           <button
             className="teal-btn"
             onClick={() => setRegisterOpen(true)}
-            disabled={!report.jobId || !report.companyId}
-            title={!report.jobId ? '분석 메타가 없어 등록 불가' : ''}
+            disabled={!saved.jobId || !saved.companyId}
+            title={!saved.jobId ? '분석 메타가 없어 등록 불가' : ''}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="12" y1="5" x2="12" y2="19" />
@@ -122,7 +188,7 @@ export default function StorageDetailPage() {
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px 28px 14px', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-        <ResultView saved={report} collect={null} />
+        <ResultView saved={saved} collect={collect} />
       </div>
 
       <div
@@ -136,30 +202,87 @@ export default function StorageDetailPage() {
           background: 'var(--white)',
         }}
       >
-        <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>저장일: {report.date}</span>
-        <button
-          className="action-btn"
-          onClick={handleDelete}
-          style={{ color: '#EF4444', borderColor: '#FECACA' }}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="3 6 5 6 21 6" />
-            <path d="M19 6l-1 14H6L5 6" />
-            <path d="M10 11v6M14 11v6" />
-            <path d="M9 6V4h6v2" />
-          </svg>
-          삭제
-        </button>
+        <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>저장일: {saved.date}</span>
       </div>
 
       <RegisterMonitorModal
         open={registerOpen}
         onClose={() => setRegisterOpen(false)}
-        saved={report}
+        saved={saved}
         onSuccess={() =>
           alert('사후관리에 등록되었습니다. 사이드바 "사후관리"에서 확인할 수 있어요.')
         }
       />
     </main>
   );
+}
+
+function BackTopbar({ title }: { title: string }) {
+  return (
+    <div className="topbar">
+      <Link
+        href="/storage"
+        aria-label="보관함으로"
+        style={{ marginRight: 10, color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="15 18 9 12 15 6" />
+        </svg>
+      </Link>
+      <span className="topbar-title" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {title}
+      </span>
+    </div>
+  );
+}
+
+// Map detail response → ResultView props (SavedReport + CollectCompanyDataResponse).
+// Returns null if detail can't be rendered (no risk_level / not done).
+function buildAdapters(
+  detail: GetAnalysisJobDetailResponse | null,
+  dept: string
+): { saved: SavedReport; collect: CollectCompanyDataResponse | null } | null {
+  if (!detail) return null;
+  const level = detail.analyze?.risk_level || detail.risk_level;
+  if (!level) return null;
+  const meta = riskMeta(level);
+
+  const saved: SavedReport = {
+    id: 0, // unused — detail page no longer uses local numeric id
+    jobId: detail.job_id,
+    companyId: detail.company_id,
+    name: detail.company_name,
+    customPrompt: detail.custom_prompt || '',
+    dept,
+    rating: meta.rating,
+    ratingName: meta.ratingName,
+    riskLevel: level,
+    riskScore: detail.analyze?.risk_score ?? null,
+    keyRiskFactors: detail.analyze?.key_risk_factors || [],
+    dataGaps: detail.analyze?.data_gaps || [],
+    newsCount: detail.collect?.news_count ?? null,
+    reportUrl: detail.report?.md_url || null,
+    docxUrl: detail.report?.docx_url || null,
+    date: (detail.finished_at || detail.created_at).slice(0, 10),
+  };
+
+  const collect: CollectCompanyDataResponse | null = detail.collect
+    ? {
+        job_id: detail.job_id,
+        status: 'collect_done',
+        company_name: detail.company_name,
+        company_id: detail.company_id || '',
+        news_count: detail.collect.news_count,
+        uploaded_files: detail.collect.uploaded_files,
+        extracted_table_count: detail.collect.extracted_table_count,
+        extracted_image_count: detail.collect.extracted_image_count,
+        extracted_doc_count: detail.collect.extracted_doc_count,
+        // backend sends int[] for years; existing type expects string[]
+        financial_years: detail.collect.financial_years.map((y) => String(y)),
+        has_internal_credit_data: detail.collect.has_internal_credit_data,
+        output_blob_path: '',
+      }
+    : null;
+
+  return { saved, collect };
 }
