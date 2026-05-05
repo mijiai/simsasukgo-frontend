@@ -37,9 +37,20 @@ export default function ReportPage() {
         <h2 style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.4px' }}>
           {analysisRun.companyName}
         </h2>
-        <Link href="/" className="teal-btn">
-          {isRunning ? '분석 중...' : '다른 기업 분석하기'}
-        </Link>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {isDone && analysisRun.savedReportId && (
+            <Link href={`/storage/${analysisRun.savedReportId}`} className="action-btn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="21 8 21 21 3 21 3 8" />
+                <rect x="1" y="3" width="22" height="5" rx="1" />
+              </svg>
+              보관함에서 열기
+            </Link>
+          )}
+          <Link href="/" className="teal-btn">
+            {isRunning ? '분석 중...' : '다른 기업 분석하기'}
+          </Link>
+        </div>
       </div>
 
       <div
