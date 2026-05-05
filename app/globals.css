@@ -261,6 +261,9 @@ body {
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
   overflow: hidden;
+  /* prevent compression in flex column parents — content drives height,
+     parent's overflow-y handles scroll */
+  flex-shrink: 0;
 }
 .tab-bar {
   display: flex;
@@ -334,6 +337,7 @@ body {
   display: flex; align-items: center; justify-content: center;
   font-size: 11.5px; font-weight: 700;
 }
+.factor-bullet.positive { background: var(--risk-low); }
 .factor-text { font-size: 13px; line-height: 1.5; color: var(--text-primary); }
 
 .gap-list { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -524,3 +528,220 @@ body {
 }
 .dept-select-trigger:hover:not(:disabled) { border-color: var(--teal); }
 .dept-select-trigger:disabled { cursor: not-allowed; opacity: 0.6; }
+
+/* ============================================================
+   Step 5 — Modal + management page
+   ============================================================ */
+
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1000;
+  animation: modal-fade 0.2s ease;
+}
+@keyframes modal-fade { from { opacity: 0; } to { opacity: 1; } }
+
+.modal-card {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  padding: 32px 36px;
+  width: 440px; max-width: 90vw;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  position: relative;
+  animation: modal-slide 0.25s ease;
+}
+@keyframes modal-slide {
+  from { transform: translateY(16px) scale(0.97); }
+  to   { transform: translateY(0) scale(1); }
+}
+
+.modal-title {
+  font-size: 18px; font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 24px;
+}
+.modal-close {
+  position: absolute; top: 16px; right: 16px;
+  width: 32px; height: 32px;
+  border: none; background: transparent;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-muted);
+  border-radius: 50%;
+  transition: background 0.15s;
+}
+.modal-close:hover { background: var(--main-bg); }
+
+.form-group { margin-bottom: 18px; }
+.form-label {
+  font-size: 13px; font-weight: 600; color: var(--text-primary);
+  margin-bottom: 7px; display: block;
+}
+.form-input {
+  width: 100%;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 10px 13px;
+  font-family: inherit; font-size: 13px;
+  color: var(--text-primary);
+  outline: none; transition: border-color 0.15s;
+  background: var(--white);
+}
+.form-input:focus {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px rgba(0, 196, 169, 0.12);
+}
+
+.modal-actions { display: flex; gap: 10px; margin-top: 28px; }
+.btn-cancel {
+  flex: 1; padding: 11px;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--white);
+  font-family: inherit; font-size: 13px; font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer; transition: all 0.15s;
+}
+.btn-cancel:hover:not(:disabled) { background: var(--main-bg); }
+.btn-cancel:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.btn-submit {
+  flex: 2; padding: 11px;
+  border: none; border-radius: var(--radius-sm);
+  background: var(--teal);
+  font-family: inherit; font-size: 13px; font-weight: 600;
+  color: white; cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: var(--shadow-btn);
+}
+.btn-submit:hover:not(:disabled) { background: var(--teal-hover); }
+.btn-submit:disabled { background: #9CA3AF; cursor: not-allowed; box-shadow: none; }
+
+/* ── Monitor card ── */
+.monitor-card {
+  display: flex; flex-direction: column;
+  border: 1px solid var(--border); border-radius: var(--radius-md);
+  background: var(--white); box-shadow: var(--shadow-card);
+  text-decoration: none; color: inherit;
+  overflow: hidden;
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+.monitor-card:hover {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+.monitor-card-head { padding: 16px 18px 14px; }
+.monitor-card-name {
+  font-size: 15px; font-weight: 700; color: var(--text-primary);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.monitor-card-divider { height: 1px; background: var(--border); }
+.monitor-card-body {
+  padding: 12px 18px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.monitor-row {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 12px; gap: 12px;
+}
+.monitor-row > span { color: var(--text-muted); flex-shrink: 0; }
+.monitor-row > strong {
+  color: var(--text-primary); font-weight: 600;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  min-width: 0;
+}
+
+/* Allow long emails / IDs in KV rows to wrap instead of overflowing the card. */
+.kv-value {
+  min-width: 0;
+}
+
+/* ── Management detail page ──
+   The card fills the viewport area (overrides default .report-card
+   flex-shrink: 0), and the tab-content scrolls internally so the action row
+   + tab bar stay visible while the user scrolls long results. */
+.management-detail-card {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.management-detail-card .tab-bar { flex-shrink: 0; }
+.management-detail-card .tab-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+.management-actions {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 22px;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+/* ── Markdown prose (보고서 본문 탭) ── */
+.md-prose {
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--text-primary);
+}
+.md-prose > :first-child { margin-top: 0; }
+.md-prose > :last-child { margin-bottom: 0; }
+.md-prose h1 { font-size: 22px; font-weight: 700; margin: 28px 0 14px; letter-spacing: -0.3px; }
+.md-prose h2 { font-size: 18px; font-weight: 700; margin: 24px 0 12px; letter-spacing: -0.2px; }
+.md-prose h3 { font-size: 15px; font-weight: 700; margin: 20px 0 10px; }
+.md-prose h4 { font-size: 14px; font-weight: 700; margin: 18px 0 8px; }
+.md-prose h1, .md-prose h2 {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
+}
+.md-prose p { margin: 0 0 14px; }
+.md-prose strong { font-weight: 700; color: var(--text-primary); }
+.md-prose em { color: var(--text-primary); }
+.md-prose ul, .md-prose ol { margin: 0 0 14px; padding-left: 22px; }
+.md-prose li { margin-bottom: 4px; }
+.md-prose blockquote {
+  border-left: 3px solid var(--teal);
+  padding: 6px 14px;
+  margin: 0 0 14px;
+  color: var(--text-secondary);
+  background: var(--teal-light);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+.md-prose code {
+  font-family: 'SFMono-Regular', Menlo, Monaco, Consolas, monospace;
+  font-size: 0.92em;
+  background: #F3F4F6;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.md-prose pre {
+  background: #F3F4F6;
+  padding: 14px 16px;
+  border-radius: var(--radius-sm);
+  overflow-x: auto;
+  margin: 0 0 14px;
+}
+.md-prose pre code { background: transparent; padding: 0; font-size: 13px; }
+.md-prose a { color: var(--teal); text-decoration: underline; }
+.md-prose a:hover { color: var(--teal-hover); }
+.md-prose hr {
+  border: none; border-top: 1px solid var(--border);
+  margin: 24px 0;
+}
+.md-prose table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0 0 14px;
+  font-size: 13px;
+}
+.md-prose th, .md-prose td {
+  border: 1px solid var(--border);
+  padding: 8px 12px;
+  text-align: left;
+}
+.md-prose th {
+  background: #FAFAFA;
+  font-weight: 600;
+}
+.md-prose img { max-width: 100%; height: auto; border-radius: var(--radius-sm); }

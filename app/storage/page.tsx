@@ -1,11 +1,16 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useApp } from '../lib/state';
 import { StorageCard } from '../components/StorageCard';
 import { StorageEmptyState } from '../components/StorageEmptyState';
 import { DEPARTMENTS, type DepartmentFilter } from '../lib/departments';
+import type {
+  ListAnalysisJobsResponse,
+  ListedAnalysisJob,
+} from '../lib/analysis-types';
+import { logError } from '../lib/log';
 
 const FILTERS: { key: DepartmentFilter; label: string }[] = [
   { key: 'ALL', label: '전체' },
@@ -14,24 +19,67 @@ const FILTERS: { key: DepartmentFilter; label: string }[] = [
 
 export default function StoragePage() {
   const { savedReports } = useApp();
+  const [jobs, setJobs] = useState<ListedAnalysisJob[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<DepartmentFilter>('ALL');
   const [query, setQuery] = useState('');
 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch('/api/mcp/list-analysis-jobs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'done', limit: 200 }),
+        });
+        if (!res.ok) {
+          const j = (await res.json().catch(() => ({}))) as { error?: string };
+          throw new Error(j.error || `HTTP ${res.status}`);
+        }
+        const data = (await res.json()) as ListAnalysisJobsResponse;
+        if (!cancelled) setJobs(data.jobs || []);
+      } catch (err) {
+        logError('list_analysis_jobs failed', err);
+        if (!cancelled) setError(err instanceof Error ? err.message : '목록 조회 실패');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Best-effort dept lookup: only jobs analyzed in the current browser session
+  // have a SavedReport entry with `dept` set. Other jobs show as "no dept".
+  const deptByJobId = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const r of savedReports) {
+      if (r.jobId && r.dept) map.set(r.jobId, r.dept);
+    }
+    return map;
+  }, [savedReports]);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return savedReports.filter((r) => {
-      if (filter !== 'ALL' && r.dept !== filter) return false;
-      if (q && !r.name.toLowerCase().includes(q)) return false;
+    return jobs.filter((j) => {
+      const dept = deptByJobId.get(j.job_id) || '';
+      if (filter !== 'ALL' && dept !== filter) return false;
+      if (q && !j.company_name.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [savedReports, filter, query]);
+  }, [jobs, filter, query, deptByJobId]);
 
   return (
     <main className="main">
       <div className="topbar">
         <span className="topbar-title">보관함</span>
         <span style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>
-          총 {savedReports.length}건
+          {loading ? '불러오는 중...' : `총 ${jobs.length}건`}
         </span>
       </div>
 
@@ -72,7 +120,17 @@ export default function StoragePage() {
             ))}
           </div>
 
-          {savedReports.length === 0 ? (
+          {loading ? (
+            <div className="empty-panel" style={{ flex: 1 }}>
+              <div className="spinner" />
+              <p>보관함을 불러오는 중...</p>
+            </div>
+          ) : error ? (
+            <div className="empty-panel" style={{ flex: 1 }}>
+              <p>목록을 불러오지 못했어요.</p>
+              <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>{error}</p>
+            </div>
+          ) : jobs.length === 0 ? (
             <StorageEmptyState
               title="저장된 보고서가 없습니다."
               hint="여신심사보고서에서 분석을 실행하면 자동으로 저장됩니다."
@@ -85,12 +143,20 @@ export default function StoragePage() {
           ) : filtered.length === 0 ? (
             <StorageEmptyState
               title="조건에 맞는 보고서가 없어요."
-              hint="검색어나 필터를 변경해보세요."
+              hint={
+                filter !== 'ALL'
+                  ? '부서 정보는 본 세션에서 분석한 카드만 매핑됩니다.'
+                  : '검색어를 변경해보세요.'
+              }
             />
           ) : (
             <div className="storage-grid">
-              {filtered.map((r) => (
-                <StorageCard key={r.id} report={r} />
+              {filtered.map((j) => (
+                <StorageCard
+                  key={j.job_id}
+                  job={j}
+                  dept={deptByJobId.get(j.job_id) || ''}
+                />
               ))}
             </div>
           )}

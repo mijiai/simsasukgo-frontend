@@ -1,17 +1,20 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import type { SavedReport } from '../lib/state';
 import type { CollectCompanyDataResponse } from '../lib/analysis-types';
 import { riskMeta } from '../lib/risk';
+import { logError } from '../lib/log';
 
-type Tab = 'summary' | 'risk' | 'data' | 'download';
+type Tab = 'summary' | 'risk' | 'data' | 'report';
 
 const TABS: Array<{ key: Tab; label: string }> = [
-  { key: 'summary',  label: '요약' },
-  { key: 'risk',     label: '위험 분석' },
-  { key: 'data',     label: '수집 데이터' },
-  { key: 'download', label: '다운로드' },
+  { key: 'summary', label: '요약' },
+  { key: 'risk',    label: '위험 분석' },
+  { key: 'data',    label: '수집 데이터' },
+  { key: 'report',  label: '보고서 본문' },
 ];
 
 function asFactorText(f: unknown): string {
@@ -61,7 +64,7 @@ export function ResultView({
           <RiskTab saved={saved} level={level} pillLabel={meta.pillLabel} />
         )}
         {tab === 'data' && <DataTab saved={saved} collect={collect} />}
-        {tab === 'download' && <DownloadTab saved={saved} />}
+        {tab === 'report' && <ReportTab mdUrl={saved.reportUrl} />}
       </div>
     </div>
   );
@@ -224,70 +227,65 @@ function DataTab({
   );
 }
 
-function DownloadTab({ saved }: { saved: SavedReport }) {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <div className="section-title">보고서 다운로드</div>
+function ReportTab({ mdUrl }: { mdUrl: string | null }) {
+  const [text, setText] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-      <DownloadCard
-        href={saved.docxUrl}
-        title="DOCX 보고서"
-        desc="Word에서 바로 편집할 수 있는 형식입니다."
-      />
-      <DownloadCard
-        href={saved.reportUrl}
-        title="Markdown 보고서"
-        desc="원문 텍스트 형식. 사내 시스템 연동용입니다."
-      />
+  useEffect(() => {
+    if (!mdUrl) {
+      setText(null);
+      setError(null);
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    setText(null);
+    fetch(mdUrl)
+      .then(async (res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.text();
+      })
+      .then((body) => {
+        if (!cancelled) setText(body);
+      })
+      .catch((err) => {
+        logError('report MD fetch failed', err);
+        if (!cancelled) {
+          // 7일 SAS 만료 후가 가장 흔한 케이스
+          setError('보고서를 불러올 수 없어요. 다운로드 링크가 만료되었을 수 있습니다.');
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [mdUrl]);
 
-      <p className="muted-note">다운로드 링크는 약 7일간 유효합니다.</p>
-    </div>
-  );
-}
-
-function DownloadCard({
-  href,
-  title,
-  desc,
-}: {
-  href: string | null;
-  title: string;
-  desc: string;
-}) {
-  if (!href) {
+  if (!mdUrl) {
+    return <p className="muted-note">보고서 본문이 아직 준비되지 않았어요.</p>;
+  }
+  if (loading) {
     return (
-      <div className="dl-card" aria-disabled="true">
-        <div className="dl-icon">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-            <polyline points="14 2 14 8 20 8" />
-          </svg>
-        </div>
-        <div className="dl-info">
-          <div className="dl-title">{title}</div>
-          <div className="dl-desc">파일이 아직 준비되지 않았습니다.</div>
-        </div>
+      <div className="empty-panel" style={{ minHeight: 200 }}>
+        <div className="spinner" />
+        <p>보고서를 불러오는 중...</p>
       </div>
     );
   }
+  if (error) {
+    return <div className="error-box">{error}</div>;
+  }
+  if (!text) {
+    return <p className="muted-note">보고서가 비어 있어요.</p>;
+  }
+
   return (
-    <a className="dl-card" href={href} target="_blank" rel="noopener">
-      <div className="dl-icon">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-          <polyline points="14 2 14 8 20 8" />
-        </svg>
-      </div>
-      <div className="dl-info">
-        <div className="dl-title">{title}</div>
-        <div className="dl-desc">{desc}</div>
-      </div>
-      <div className="dl-arrow">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <line x1="5" y1="12" x2="19" y2="12" />
-          <polyline points="12 5 19 12 12 19" />
-        </svg>
-      </div>
-    </a>
+    <article className="md-prose">
+      <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
+    </article>
   );
 }
