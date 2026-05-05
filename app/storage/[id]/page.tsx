@@ -14,19 +14,29 @@ export default function StorageDetailPage() {
   const { savedReports, deleteStoredReport } = useApp();
   const [registerOpen, setRegisterOpen] = useState(false);
 
-  const id = Number(params?.id);
-  const report = Number.isFinite(id) ? savedReports.find((r) => r.id === id) : undefined;
+  // The route param is now the backend job_id (UUID). Look it up in the
+  // current session's savedReports by jobId. Older numeric ids from before
+  // this change still match via fallback.
+  const idParam = params?.id || '';
+  const report = savedReports.find(
+    (r) => r.jobId === idParam || String(r.id) === idParam
+  );
 
   if (!report) {
     return (
       <main className="main">
         <div className="topbar">
+          <Link href="/storage" aria-label="보관함으로" style={{ marginRight: 10, color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="15 18 9 12 15 6" />
+            </svg>
+          </Link>
           <span className="topbar-title">보관함</span>
         </div>
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 28 }}>
           <StorageEmptyState
-            title="보고서를 찾을 수 없어요."
-            hint="페이지를 새로고침하면 메모리에 저장된 보고서가 사라집니다. (영속화는 다음 단계)"
+            title="이 보고서의 본문은 표시할 수 없어요."
+            hint="현 브라우저 세션에서 분석한 보고서만 본문을 볼 수 있습니다. 다른 세션에서 만든 보고서를 보려면 백엔드의 분석 상세 도구가 추가되어야 합니다."
             cta={
               <Link href="/storage" className="teal-btn" style={{ marginTop: 8 }}>
                 보관함으로

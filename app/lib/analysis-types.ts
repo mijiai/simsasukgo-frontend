@@ -57,3 +57,34 @@ export interface CreateAnalysisJobRequestBody {
   customPrompt?: string;
   fileBlobPaths?: string[];
 }
+
+export type JobStatus =
+  | 'pending'
+  | 'collecting'
+  | 'analyzing'
+  | 'reporting'
+  | 'done'
+  | 'failed';
+
+export type AgentName = 'collector' | 'financial' | 'report' | 'monitoring';
+
+export interface ListedAnalysisJob {
+  job_id: string;
+  company_id: string | null;
+  company_name: string;
+  status: JobStatus;
+  user_id: string | null;
+  risk_level: RiskLevel | null;
+  current_agent: AgentName | null;
+  created_at: string;
+  updated_at: string;
+  finished_at: string | null;
+  report_blob_path: string | null;
+}
+
+export interface ListAnalysisJobsResponse {
+  jobs: ListedAnalysisJob[];
+  total: number;
+  limit: number;
+  offset: number;
+}
