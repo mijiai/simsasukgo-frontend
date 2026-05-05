@@ -2,6 +2,9 @@ import 'server-only';
 
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
 const ANTHROPIC_VERSION = '2023-06-01';
+// MCP connector is gated behind a beta header. Without it the request body's
+// `mcp_servers` field is rejected as "Extra inputs are not permitted".
+const ANTHROPIC_BETA = 'mcp-client-2025-04-04';
 const MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-20250514';
 const MCP_NAME = process.env.SIMSASUKGO_MCP_NAME || '심사숙고';
 const MCP_URL =
@@ -37,6 +40,7 @@ export async function callMCPTool(toolName: string, prompt: string): Promise<unk
     headers: {
       'Content-Type': 'application/json',
       'anthropic-version': ANTHROPIC_VERSION,
+      'anthropic-beta': ANTHROPIC_BETA,
       'x-api-key': apiKey,
     },
     body: JSON.stringify({
