@@ -42,6 +42,7 @@ export default function ManagementDetailPage() {
   const [snapshot, setSnapshot] = useState<MonitorGetLatestSnapshotResponse | null>(null);
   const [running, setRunning] = useState(false);
   const [runError, setRunError] = useState<string | null>(null);
+  const [tab, setTab] = useState<'info' | 'result'>('info');
 
   useEffect(() => {
     let cancelled = false;
@@ -76,6 +77,7 @@ export default function ManagementDetailPage() {
 
   const handleRunNow = async () => {
     if (!target || running) return;
+    setTab('result');
     setRunning(true);
     setRunError(null);
     try {
@@ -194,97 +196,114 @@ export default function ManagementDetailPage() {
       <div
         style={{
           flex: 1,
-          overflowY: 'auto',
+          overflow: 'hidden',
           padding: '16px 28px 28px',
           display: 'flex',
           flexDirection: 'column',
-          gap: 14,
           minHeight: 0,
         }}
       >
-        <div className="report-card">
-          <div className="tab-bar">
-            <button className="tab active" type="button">모니터링 정보</button>
+        <div className="report-card management-detail-card">
+          <div className="management-actions">
+            <button className="teal-btn" onClick={handleRunNow} disabled={running}>
+              {running ? '재분석 중...' : '지금 재분석'}
+            </button>
+            {linked && (
+              <Link href={`/storage/${linked.id}`} className="action-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                </svg>
+                원본 보고서 보기
+              </Link>
+            )}
+            <button
+              className="action-btn"
+              onClick={handleDeregister}
+              style={{ color: '#EF4444', borderColor: '#FECACA', marginLeft: 'auto' }}
+            >
+              모니터링 해제
+            </button>
           </div>
+
+          <div className="tab-bar">
+            <button
+              type="button"
+              className={`tab${tab === 'info' ? ' active' : ''}`}
+              onClick={() => setTab('info')}
+            >
+              모니터링 정보
+            </button>
+            <button
+              type="button"
+              className={`tab${tab === 'result' ? ' active' : ''}`}
+              onClick={() => setTab('result')}
+            >
+              최근 모니터링 결과
+            </button>
+          </div>
+
           <div className="tab-content">
-            <div className="kv-row">
-              <span className="kv-label">알림 이메일</span>
-              <span className="kv-value">{target.recipient_email}</span>
-            </div>
-            <div className="kv-row">
-              <span className="kv-label">분석 주기</span>
-              <span className="kv-value">분기 (3개월)</span>
-            </div>
-            <div className="kv-row">
-              <span className="kv-label">등록일</span>
-              <span className="kv-value">
-                {new Date(target.registered_at).toISOString().slice(0, 10)}
-              </span>
-            </div>
-            <div className="kv-row">
-              <span className="kv-label">마지막 재분석</span>
-              <span className="kv-value">
-                {target.last_run_at ? new Date(target.last_run_at).toISOString().slice(0, 10) : '아직 없음'}
-              </span>
-            </div>
-            {meta && target.last_risk_level && (
-              <div className="kv-row">
-                <span className="kv-label">최근 위험 등급</span>
-                <span className="kv-value">
-                  {target.last_risk_level} · {meta.ratingName}
-                </span>
+            {tab === 'info' && (
+              <div>
+                <div className="kv-row">
+                  <span className="kv-label">알림 이메일</span>
+                  <span className="kv-value">{target.recipient_email}</span>
+                </div>
+                <div className="kv-row">
+                  <span className="kv-label">분석 주기</span>
+                  <span className="kv-value">분기 (3개월)</span>
+                </div>
+                <div className="kv-row">
+                  <span className="kv-label">등록일</span>
+                  <span className="kv-value">
+                    {new Date(target.registered_at).toISOString().slice(0, 10)}
+                  </span>
+                </div>
+                <div className="kv-row">
+                  <span className="kv-label">마지막 재분석</span>
+                  <span className="kv-value">
+                    {target.last_run_at
+                      ? new Date(target.last_run_at).toISOString().slice(0, 10)
+                      : '아직 없음'}
+                  </span>
+                </div>
+                {meta && target.last_risk_level && (
+                  <div className="kv-row">
+                    <span className="kv-label">최근 위험 등급</span>
+                    <span className="kv-value">
+                      {target.last_risk_level} · {meta.ratingName}
+                    </span>
+                  </div>
+                )}
+                <p className="muted-note" style={{ marginTop: 18 }}>
+                  &quot;지금 재분석&quot;은 최신 자료로 위험도만 다시 산정합니다 (Markdown · DOCX 보고서는 재생성하지 않음).
+                  위험 등급이 상승하면 등록한 이메일로 알림이 발송됩니다.
+                </p>
               </div>
             )}
 
-            <div style={{ display: 'flex', gap: 10, marginTop: 24, flexWrap: 'wrap' }}>
-              <button className="teal-btn" onClick={handleRunNow} disabled={running}>
-                {running ? '재분석 중...' : '지금 재분석'}
-              </button>
-              <button
-                className="action-btn"
-                onClick={handleDeregister}
-                style={{ color: '#EF4444', borderColor: '#FECACA' }}
-              >
-                모니터링 해제
-              </button>
-              {linked && (
-                <Link href={`/storage/${linked.id}`} className="action-btn">
-                  원본 보고서 보기
-                </Link>
-              )}
-            </div>
-
-            <p className="muted-note" style={{ marginTop: 14 }}>
-              &quot;지금 재분석&quot;은 최신 자료로 위험도만 다시 산정합니다 (Markdown · DOCX 보고서는 재생성하지 않음).
-              위험 등급이 상승하면 등록한 이메일로 알림이 발송됩니다.
-            </p>
-          </div>
-        </div>
-
-        <div className="report-card">
-          <div className="tab-bar">
-            <button className="tab active" type="button">최근 모니터링 결과</button>
-          </div>
-          <div className="tab-content">
-            {running ? (
-              <div className="empty-panel" style={{ minHeight: 160 }}>
-                <div className="spinner" />
-                <p>최신 자료로 위험도를 다시 산정하고 있어요... (30~60초)</p>
-              </div>
-            ) : runError ? (
-              <div className="error-box">
-                <strong>재분석에 실패했어요</strong>
-                {runError}
-              </div>
-            ) : snapshot && snapshot.available ? (
-              <SnapshotPanel snapshot={snapshot} />
-            ) : (
-              <div className="empty-panel" style={{ minHeight: 160 }}>
-                <p>아직 한 번도 재분석되지 않았어요.</p>
-                <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                  분기 cron 이 자동 실행하기 전에 먼저 보고 싶다면 위의 &quot;지금 재분석&quot; 버튼을 누르세요.
-                </p>
-              </div>
+            {tab === 'result' && (
+              running ? (
+                <div className="empty-panel" style={{ minHeight: 200 }}>
+                  <div className="spinner" />
+                  <p>최신 자료로 위험도를 다시 산정하고 있어요... (30~60초)</p>
+                </div>
+              ) : runError ? (
+                <div className="error-box">
+                  <strong>재분석에 실패했어요</strong>
+                  {runError}
+                </div>
+              ) : snapshot && snapshot.available ? (
+                <SnapshotPanel snapshot={snapshot} />
+              ) : (
+                <div className="empty-panel" style={{ minHeight: 200 }}>
+                  <p>아직 한 번도 재분석되지 않았어요.</p>
+                  <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                    분기 cron 이 자동 실행하기 전에 먼저 보고 싶다면 위의 &quot;지금 재분석&quot; 버튼을 누르세요.
+                  </p>
+                </div>
+              )
             )}
           </div>
         </div>

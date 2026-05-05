@@ -261,6 +261,9 @@ body {
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
   overflow: hidden;
+  /* prevent compression in flex column parents — content drives height,
+     parent's overflow-y handles scroll */
+  flex-shrink: 0;
 }
 .tab-bar {
   display: flex;
@@ -645,4 +648,33 @@ body {
   color: var(--text-primary); font-weight: 600;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   min-width: 0;
+}
+
+/* Allow long emails / IDs in KV rows to wrap instead of overflowing the card. */
+.kv-value {
+  min-width: 0;
+}
+
+/* ── Management detail page ──
+   The card fills the viewport area (overrides default .report-card
+   flex-shrink: 0), and the tab-content scrolls internally so the action row
+   + tab bar stay visible while the user scrolls long results. */
+.management-detail-card {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.management-detail-card .tab-bar { flex-shrink: 0; }
+.management-detail-card .tab-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+.management-actions {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 22px;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+  flex-shrink: 0;
 }
