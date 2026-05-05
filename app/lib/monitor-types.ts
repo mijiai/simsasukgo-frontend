@@ -38,4 +38,10 @@ export interface MonitorRunNowResponse {
   previous_risk_level: RiskLevel | null;
   risk_changed: boolean;
   snapshot_blob_path: string;
+  // Optional snapshot details — backend started returning these after the
+  // schema patch; older snapshots / older backend versions may omit them.
+  summary?: string | null;
+  key_risk_factors?: string[];
+  positive_signals?: string[];
+  data_gaps?: string[];
 }

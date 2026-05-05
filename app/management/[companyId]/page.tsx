@@ -257,9 +257,13 @@ export default function ManagementDetailPage() {
 
 function RunResultPanel({ result }: { result: MonitorRunNowResponse }) {
   const meta = riskMeta(result.risk_level);
+  const factors = result.key_risk_factors || [];
+  const signals = result.positive_signals || [];
+  const gaps = result.data_gaps || [];
+
   return (
-    <div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 18 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
         <div className={`risk-badge-lg ${result.risk_level}`}>{meta.rating}</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <span className="muted-note">현재 위험도</span>
@@ -272,22 +276,70 @@ function RunResultPanel({ result }: { result: MonitorRunNowResponse }) {
         </div>
       </div>
 
-      <div className="kv-row">
-        <span className="kv-label">위험 점수</span>
-        <span className="kv-value">{result.risk_score}</span>
+      {result.summary && (
+        <div>
+          <div className="section-title">요약</div>
+          <p className="summary-text">{result.summary}</p>
+        </div>
+      )}
+
+      <div>
+        <div className="kv-row">
+          <span className="kv-label">위험 점수</span>
+          <span className="kv-value">{result.risk_score}</span>
+        </div>
+        <div className="kv-row">
+          <span className="kv-label">실행 일자</span>
+          <span className="kv-value">{result.run_date}</span>
+        </div>
+        <div className="kv-row">
+          <span className="kv-label">이전 등급 대비</span>
+          <span className="kv-value">
+            {result.previous_risk_level
+              ? `${result.previous_risk_level} → ${result.risk_level}${result.risk_changed ? ' (변동)' : ''}`
+              : '첫 실행 (이전 기록 없음)'}
+          </span>
+        </div>
       </div>
-      <div className="kv-row">
-        <span className="kv-label">실행 일자</span>
-        <span className="kv-value">{result.run_date}</span>
-      </div>
-      <div className="kv-row">
-        <span className="kv-label">이전 등급 대비</span>
-        <span className="kv-value">
-          {result.previous_risk_level
-            ? `${result.previous_risk_level} → ${result.risk_level}${result.risk_changed ? ' (변동)' : ''}`
-            : '첫 실행 (이전 기록 없음)'}
-        </span>
-      </div>
+
+      {factors.length > 0 && (
+        <div>
+          <div className="section-title">위험 요인 ({factors.length})</div>
+          <ol className="factor-list">
+            {factors.map((f, i) => (
+              <li key={i} className="factor-item">
+                <span className="factor-bullet">{i + 1}</span>
+                <span className="factor-text">{f}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+
+      {signals.length > 0 && (
+        <div>
+          <div className="section-title">긍정 신호 ({signals.length})</div>
+          <ol className="factor-list">
+            {signals.map((s, i) => (
+              <li key={i} className="factor-item">
+                <span className="factor-bullet positive">{i + 1}</span>
+                <span className="factor-text">{s}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+
+      {gaps.length > 0 && (
+        <div>
+          <div className="section-title">자료 부족 ({gaps.length})</div>
+          <div className="gap-list">
+            {gaps.map((g, i) => (
+              <span key={i} className="gap-tag">{g}</span>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

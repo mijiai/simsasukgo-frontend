@@ -334,6 +334,7 @@ body {
   display: flex; align-items: center; justify-content: center;
   font-size: 11.5px; font-weight: 700;
 }
+.factor-bullet.positive { background: var(--risk-low); }
 .factor-text { font-size: 13px; line-height: 1.5; color: var(--text-primary); }
 
 .gap-list { display: flex; flex-wrap: wrap; gap: 6px; }
