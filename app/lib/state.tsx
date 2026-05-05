@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useState, ReactNode } from 'rea
 import { useRouter } from 'next/navigation';
 import { logError } from './log';
 import { riskMeta } from './risk';
+import { uploadFilesSequentially } from './upload';
 import type {
   RiskLevel,
   CreateAnalysisJobResponse,
@@ -65,13 +66,21 @@ export interface SavedReport {
   date: string;
 }
 
-// 4 steps that match the MCP pipeline. 'upload' is reserved for Step 3.
+// 4 MCP-pipeline steps. The `upload` step is prepended dynamically when the
+// user attaches files (Step 3).
 const STEPS_TEMPLATE: PipelineStep[] = [
   { key: 'create',  title: '분석 작업 생성', desc: '심사숙고 작업을 시작하고 있어요.',           status: 'idle' },
   { key: 'collect', title: '기업 데이터 수집', desc: '뉴스와 재무 자료를 모으고 있어요.',         status: 'idle' },
   { key: 'analyze', title: '재무 위험 분석',   desc: 'AI가 위험 요인과 점수를 판단하고 있어요.', status: 'idle' },
   { key: 'report',  title: '보고서 생성',     desc: '여신심사 보고서를 작성하고 있어요.',         status: 'idle' },
 ];
+
+const buildUploadStep = (fileCount: number): PipelineStep => ({
+  key: 'upload',
+  title: '파일 업로드',
+  desc: `${fileCount}개 파일을 안전하게 업로드합니다.`,
+  status: 'idle',
+});
 
 // =============================================================
 // Context
@@ -88,7 +97,7 @@ interface AppContextValue {
   setSavedReports: (
     updater: SavedReport[] | ((prev: SavedReport[]) => SavedReport[])
   ) => void;
-  startAnalysis: (companyName: string, customPrompt: string, fileNames: string[]) => void;
+  startAnalysis: (companyName: string, customPrompt: string, files: File[]) => void;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -131,14 +140,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
 
   const startAnalysis = useCallback(
-    (companyName: string, customPrompt: string, fileNames: string[]) => {
+    (companyName: string, customPrompt: string, files: File[]) => {
       const runId = Date.now();
+      const hasFiles = files.length > 0;
+      const fileNames = files.map((f) => f.name);
+
+      const initialSteps: PipelineStep[] = [
+        ...(hasFiles ? [buildUploadStep(files.length)] : []),
+        ...STEPS_TEMPLATE.map((s) => ({ ...s, status: 'idle' as StepStatus })),
+      ];
+
       setAnalysisRunState({
         runId,
         companyName,
         customPrompt,
         fileNames,
-        steps: STEPS_TEMPLATE.map((s) => ({ ...s, status: 'idle' })),
+        steps: initialSteps,
         status: 'running',
         result: null,
         error: null,
@@ -146,40 +163,57 @@ export function AppProvider({ children }: { children: ReactNode }) {
       });
       router.push('/report');
 
-      const updateStep = (key: StepKey, status: StepStatus) =>
+      const updateStep = (key: StepKey, partial: Partial<PipelineStep>) =>
         setAnalysisRunState((prev) =>
           prev && prev.runId === runId
-            ? { ...prev, steps: prev.steps.map((s) => (s.key === key ? { ...s, status } : s)) }
+            ? {
+                ...prev,
+                steps: prev.steps.map((s) => (s.key === key ? { ...s, ...partial } : s)),
+              }
             : prev
         );
 
       (async () => {
         try {
-          updateStep('create', 'running');
+          let fileBlobPaths: string[] = [];
+          if (hasFiles) {
+            updateStep('upload', { status: 'running' });
+            const uploaded = await uploadFilesSequentially(files, (cur, total, filename) => {
+              updateStep('upload', { desc: `${cur}/${total} — ${filename}` });
+            });
+            fileBlobPaths = uploaded.map((r) => r.blobPath);
+            updateStep('upload', {
+              status: 'done',
+              desc: `${files.length}개 파일 업로드 완료`,
+            });
+          }
+
+          updateStep('create', { status: 'running' });
           const job = await postJSON<CreateAnalysisJobResponse>('/api/mcp/create-job', {
             companyName,
             customPrompt,
+            fileBlobPaths: hasFiles ? fileBlobPaths : undefined,
           });
-          updateStep('create', 'done');
+          updateStep('create', { status: 'done' });
 
-          updateStep('collect', 'running');
+          updateStep('collect', { status: 'running' });
           const collect = await postJSON<CollectCompanyDataResponse>('/api/mcp/collect', {
             jobId: job.job_id,
             companyName,
           });
-          updateStep('collect', 'done');
+          updateStep('collect', { status: 'done' });
 
-          updateStep('analyze', 'running');
+          updateStep('analyze', { status: 'running' });
           const analysis = await postJSON<AnalyzeFinancialsResponse>('/api/mcp/analyze', {
             jobId: job.job_id,
           });
-          updateStep('analyze', 'done');
+          updateStep('analyze', { status: 'done' });
 
-          updateStep('report', 'running');
+          updateStep('report', { status: 'running' });
           const report = await postJSON<ReportGenerateResponse>('/api/mcp/report', {
             jobId: job.job_id,
           });
-          updateStep('report', 'done');
+          updateStep('report', { status: 'done' });
 
           const meta = riskMeta(analysis.risk_level);
           const saved: SavedReport = {
