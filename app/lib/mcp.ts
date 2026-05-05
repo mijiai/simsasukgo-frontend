@@ -5,7 +5,7 @@ const ANTHROPIC_VERSION = '2023-06-01';
 // MCP connector is gated behind a beta header. Without it the request body's
 // `mcp_servers` field is rejected as "Extra inputs are not permitted".
 const ANTHROPIC_BETA = 'mcp-client-2025-04-04';
-const MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-20250514';
+const MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6';
 const MCP_NAME = process.env.SIMSASUKGO_MCP_NAME || '심사숙고';
 const MCP_URL =
   process.env.SIMSASUKGO_MCP_URL ||
