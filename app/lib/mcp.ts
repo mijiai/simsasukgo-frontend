@@ -37,29 +37,65 @@ interface AnthropicResponse {
   usage?: unknown;
 }
 
+// 429 (rate limit) and 529 (overloaded) — back off and retry. Anthropic returns
+// `retry-after` (seconds) on 429; honor it but cap so a single tool call can't
+// stall the pipeline forever.
+const MAX_RETRIES = 3;
+const MAX_RETRY_WAIT_MS = 45_000;
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+async function fetchWithRetry(toolName: string, body: string, apiKey: string): Promise<Response> {
+  let attempt = 0;
+  while (true) {
+    const res = await fetch(ANTHROPIC_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'anthropic-version': ANTHROPIC_VERSION,
+        'anthropic-beta': ANTHROPIC_BETA,
+        'x-api-key': apiKey,
+      },
+      body,
+    });
+
+    const retriable = res.status === 429 || res.status === 529;
+    if (!retriable || attempt >= MAX_RETRIES) return res;
+
+    const retryAfterHeader = res.headers.get('retry-after');
+    const retryAfterSec = retryAfterHeader ? Number(retryAfterHeader) : NaN;
+    const backoff = Number.isFinite(retryAfterSec) && retryAfterSec > 0
+      ? Math.min(retryAfterSec * 1000, MAX_RETRY_WAIT_MS)
+      : Math.min(2_000 * 2 ** attempt, MAX_RETRY_WAIT_MS);
+
+    console.log(`[mcp:${toolName}] ${res.status} retry`, {
+      attempt: attempt + 1,
+      waitMs: backoff,
+      retryAfter: retryAfterHeader,
+    });
+    // Drain body so the connection can be reused.
+    await res.text().catch(() => '');
+    await sleep(backoff);
+    attempt += 1;
+  }
+}
+
 export async function callMCPTool(toolName: string, prompt: string): Promise<unknown> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new MCPCallError('ANTHROPIC_API_KEY not set', 500);
 
-  const res = await fetch(ANTHROPIC_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'anthropic-version': ANTHROPIC_VERSION,
-      'anthropic-beta': ANTHROPIC_BETA,
-      'x-api-key': apiKey,
-    },
-    body: JSON.stringify({
-      model: MODEL,
-      max_tokens: 2048,
-      messages: [{ role: 'user', content: prompt }],
-      mcp_servers: [{ type: 'url', url: MCP_URL, name: MCP_NAME }],
-    }),
+  const body = JSON.stringify({
+    model: MODEL,
+    max_tokens: 2048,
+    messages: [{ role: 'user', content: prompt }],
+    mcp_servers: [{ type: 'url', url: MCP_URL, name: MCP_NAME }],
   });
 
+  const res = await fetchWithRetry(toolName, body, apiKey);
+
   if (!res.ok) {
-    const body = await res.text().catch(() => '');
-    throw new MCPCallError(`Anthropic API ${res.status}: ${body.slice(0, 200)}`, 502);
+    const errBody = await res.text().catch(() => '');
+    throw new MCPCallError(`Anthropic API ${res.status}: ${errBody.slice(0, 200)}`, 502);
   }
 
   const data = (await res.json()) as AnthropicResponse;
