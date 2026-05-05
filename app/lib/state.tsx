@@ -98,6 +98,7 @@ interface AppContextValue {
     updater: SavedReport[] | ((prev: SavedReport[]) => SavedReport[])
   ) => void;
   startAnalysis: (companyName: string, customPrompt: string, files: File[]) => void;
+  deleteStoredReport: (id: number) => void;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -138,6 +139,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     },
     []
   );
+
+  const deleteStoredReport = useCallback((id: number) => {
+    setSavedReportsState((prev) => prev.filter((r) => r.id !== id));
+  }, []);
 
   const startAnalysis = useCallback(
     (companyName: string, customPrompt: string, files: File[]) => {
@@ -269,6 +274,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setAnalysisRun,
         setSavedReports,
         startAnalysis,
+        deleteStoredReport,
       }}
     >
       {children}
