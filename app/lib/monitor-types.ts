@@ -27,6 +27,29 @@ export interface MonitorDeregisterResponse {
   status: 'deregistered';
 }
 
+export interface MonitorGetLatestSnapshotResponse {
+  company_id: string;
+  company_name: string;
+  available: boolean;
+  // available=true 일 때만 채워짐
+  run_at?: string | null;
+  run_date?: string | null;
+  analysis_job_id?: string | null;
+  previous_risk_level?: RiskLevel | null;
+  risk_level?: RiskLevel | null;
+  risk_score?: number | null;
+  risk_changed?: boolean | null;
+  summary?: string | null;
+  key_risk_factors?: string[];
+  positive_signals?: string[];
+  data_gaps?: string[];
+  news_count?: number;
+  lawsuit_count?: number;
+  news_top_titles?: string[];
+  model?: string | null;
+  snapshot_blob_path?: string | null;
+}
+
 export interface MonitorRunNowResponse {
   company_id: string;
   company_name: string;

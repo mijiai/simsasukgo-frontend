@@ -9,8 +9,24 @@ import type {
   MonitorTarget,
   MonitorListResponse,
   MonitorRunNowResponse,
+  MonitorGetLatestSnapshotResponse,
 } from '../../lib/monitor-types';
 import { riskMeta } from '../../lib/risk';
+
+async function fetchLatestSnapshot(
+  companyId: string
+): Promise<MonitorGetLatestSnapshotResponse> {
+  const res = await fetch('/api/mcp/monitor-get-latest-snapshot', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ companyId }),
+  });
+  if (!res.ok) {
+    const j = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(j.error || `HTTP ${res.status}`);
+  }
+  return (await res.json()) as MonitorGetLatestSnapshotResponse;
+}
 
 export default function ManagementDetailPage() {
   const params = useParams<{ companyId: string }>();
@@ -23,7 +39,7 @@ export default function ManagementDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [runResult, setRunResult] = useState<MonitorRunNowResponse | null>(null);
+  const [snapshot, setSnapshot] = useState<MonitorGetLatestSnapshotResponse | null>(null);
   const [running, setRunning] = useState(false);
   const [runError, setRunError] = useState<string | null>(null);
 
@@ -32,11 +48,20 @@ export default function ManagementDetailPage() {
     (async () => {
       setLoading(true);
       try {
-        const res = await fetch('/api/mcp/monitor-list', { method: 'POST' });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = (await res.json()) as MonitorListResponse;
-        const found = data.targets.find((t) => t.company_id === companyId) || null;
-        if (!cancelled) setTarget(found);
+        const [listRes, snap] = await Promise.all([
+          fetch('/api/mcp/monitor-list', { method: 'POST' }).then(async (res) => {
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            return (await res.json()) as MonitorListResponse;
+          }),
+          fetchLatestSnapshot(companyId).catch((err) => {
+            logError('monitor_get_latest_snapshot failed', err);
+            return null;
+          }),
+        ]);
+        if (cancelled) return;
+        const found = listRes.targets.find((t) => t.company_id === companyId) || null;
+        setTarget(found);
+        setSnapshot(snap);
       } catch (err) {
         logError('monitor_list (detail) failed', err);
         if (!cancelled) setError(err instanceof Error ? err.message : '조회 실패');
@@ -64,7 +89,6 @@ export default function ManagementDetailPage() {
         throw new Error(j.error || `HTTP ${res.status}`);
       }
       const data = (await res.json()) as MonitorRunNowResponse;
-      setRunResult(data);
       setTarget(
         (prev) =>
           prev && {
@@ -73,6 +97,15 @@ export default function ManagementDetailPage() {
             last_run_at: new Date().toISOString(),
           }
       );
+      // Refetch the full snapshot — run_now's response doesn't include
+      // news_top_titles / news_count etc. that we surface in the panel.
+      try {
+        const fresh = await fetchLatestSnapshot(target.company_id);
+        setSnapshot(fresh);
+      } catch (err) {
+        logError('snapshot refetch after run_now failed', err);
+        // best-effort — don't surface this as a hard error; the run itself succeeded
+      }
     } catch (err) {
       logError('monitor_run_now failed', err);
       setRunError(err instanceof Error ? err.message : '재분석 실패');
@@ -228,78 +261,101 @@ export default function ManagementDetailPage() {
           </div>
         </div>
 
-        {(running || runResult || runError) && (
-          <div className="report-card">
-            <div className="tab-bar">
-              <button className="tab active" type="button">최근 재분석 결과</button>
-            </div>
-            <div className="tab-content">
-              {running && (
-                <div className="empty-panel" style={{ minHeight: 120 }}>
-                  <div className="spinner" />
-                  <p>최신 자료로 위험도를 다시 산정하고 있어요... (30~60초)</p>
-                </div>
-              )}
-              {runError && (
-                <div className="error-box">
-                  <strong>재분석에 실패했어요</strong>
-                  {runError}
-                </div>
-              )}
-              {runResult && !running && <RunResultPanel result={runResult} />}
-            </div>
+        <div className="report-card">
+          <div className="tab-bar">
+            <button className="tab active" type="button">최근 모니터링 결과</button>
           </div>
-        )}
+          <div className="tab-content">
+            {running ? (
+              <div className="empty-panel" style={{ minHeight: 160 }}>
+                <div className="spinner" />
+                <p>최신 자료로 위험도를 다시 산정하고 있어요... (30~60초)</p>
+              </div>
+            ) : runError ? (
+              <div className="error-box">
+                <strong>재분석에 실패했어요</strong>
+                {runError}
+              </div>
+            ) : snapshot && snapshot.available ? (
+              <SnapshotPanel snapshot={snapshot} />
+            ) : (
+              <div className="empty-panel" style={{ minHeight: 160 }}>
+                <p>아직 한 번도 재분석되지 않았어요.</p>
+                <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                  분기 cron 이 자동 실행하기 전에 먼저 보고 싶다면 위의 &quot;지금 재분석&quot; 버튼을 누르세요.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </main>
   );
 }
 
-function RunResultPanel({ result }: { result: MonitorRunNowResponse }) {
-  const meta = riskMeta(result.risk_level);
-  const factors = result.key_risk_factors || [];
-  const signals = result.positive_signals || [];
-  const gaps = result.data_gaps || [];
+function SnapshotPanel({ snapshot }: { snapshot: MonitorGetLatestSnapshotResponse }) {
+  const level = snapshot.risk_level;
+  const meta = level ? riskMeta(level) : null;
+  const factors = snapshot.key_risk_factors || [];
+  const signals = snapshot.positive_signals || [];
+  const gaps = snapshot.data_gaps || [];
+  const newsTitles = snapshot.news_top_titles || [];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-        <div className={`risk-badge-lg ${result.risk_level}`}>{meta.rating}</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <span className="muted-note">현재 위험도</span>
-          <span style={{ fontSize: 15, fontWeight: 700 }}>
-            {meta.ratingName} · {meta.pillLabel}
-          </span>
+      {level && meta && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div className={`risk-badge-lg ${level}`}>{meta.rating}</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <span className="muted-note">현재 위험도</span>
+            <span style={{ fontSize: 15, fontWeight: 700 }}>
+              {meta.ratingName} · {meta.pillLabel}
+            </span>
+          </div>
+          <div style={{ marginLeft: 'auto' }}>
+            <span className={`risk-pill ${level}`}>{level}</span>
+          </div>
         </div>
-        <div style={{ marginLeft: 'auto' }}>
-          <span className={`risk-pill ${result.risk_level}`}>{result.risk_level}</span>
-        </div>
-      </div>
+      )}
 
-      {result.summary && (
+      {snapshot.summary && (
         <div>
           <div className="section-title">요약</div>
-          <p className="summary-text">{result.summary}</p>
+          <p className="summary-text">{snapshot.summary}</p>
         </div>
       )}
 
       <div>
-        <div className="kv-row">
-          <span className="kv-label">위험 점수</span>
-          <span className="kv-value">{result.risk_score}</span>
-        </div>
-        <div className="kv-row">
-          <span className="kv-label">실행 일자</span>
-          <span className="kv-value">{result.run_date}</span>
-        </div>
-        <div className="kv-row">
-          <span className="kv-label">이전 등급 대비</span>
-          <span className="kv-value">
-            {result.previous_risk_level
-              ? `${result.previous_risk_level} → ${result.risk_level}${result.risk_changed ? ' (변동)' : ''}`
-              : '첫 실행 (이전 기록 없음)'}
-          </span>
-        </div>
+        {snapshot.risk_score != null && (
+          <div className="kv-row">
+            <span className="kv-label">위험 점수</span>
+            <span className="kv-value">{snapshot.risk_score}</span>
+          </div>
+        )}
+        {snapshot.run_date && (
+          <div className="kv-row">
+            <span className="kv-label">실행 일자</span>
+            <span className="kv-value">{snapshot.run_date}</span>
+          </div>
+        )}
+        {level && (
+          <div className="kv-row">
+            <span className="kv-label">이전 등급 대비</span>
+            <span className="kv-value">
+              {snapshot.previous_risk_level
+                ? `${snapshot.previous_risk_level} → ${level}${snapshot.risk_changed ? ' (변동)' : ''}`
+                : '첫 실행 (이전 기록 없음)'}
+            </span>
+          </div>
+        )}
+        {(snapshot.news_count != null || snapshot.lawsuit_count != null) && (
+          <div className="kv-row">
+            <span className="kv-label">관련 자료</span>
+            <span className="kv-value">
+              뉴스 {snapshot.news_count ?? 0}건 · 소송 {snapshot.lawsuit_count ?? 0}건
+            </span>
+          </div>
+        )}
       </div>
 
       {factors.length > 0 && (
@@ -338,6 +394,20 @@ function RunResultPanel({ result }: { result: MonitorRunNowResponse }) {
               <span key={i} className="gap-tag">{g}</span>
             ))}
           </div>
+        </div>
+      )}
+
+      {newsTitles.length > 0 && (
+        <div>
+          <div className="section-title">관련 뉴스 헤드라인 ({newsTitles.length})</div>
+          <ul style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingLeft: 0, listStyle: 'none' }}>
+            {newsTitles.map((t, i) => (
+              <li key={i} style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5, paddingLeft: 16, position: 'relative' }}>
+                <span style={{ position: 'absolute', left: 0, color: 'var(--text-muted)' }}>·</span>
+                {t}
+              </li>
+            ))}
+          </ul>
         </div>
       )}
     </div>
