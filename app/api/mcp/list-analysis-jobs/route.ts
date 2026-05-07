@@ -1,33 +1,43 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { callMCPTool, MCPCallError } from '@/app/lib/mcp';
+
+const BACKEND_URL =
+  process.env.SIMSASUKGO_BACKEND_URL ||
+  process.env.SIMSASUKGO_MCP_URL?.replace(/\/sse$/, '') ||
+  'http://localhost:8000';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
 
 export async function POST(req: NextRequest) {
   try {
-    const { userId, status, limit, offset } = (await req.json().catch(() => ({}))) as {
+    const body = (await req.json().catch(() => ({}))) as {
       userId?: string | null;
       status?: string | null;
       limit?: number;
       offset?: number;
     };
 
-    const args: string[] = [];
-    if (userId) args.push(`- user_id: ${JSON.stringify(userId)}`);
-    if (status) args.push(`- status: ${JSON.stringify(status)}`);
-    if (typeof limit === 'number') args.push(`- limit: ${limit}`);
-    if (typeof offset === 'number') args.push(`- offset: ${offset}`);
-    const argsBlock = args.length > 0 ? `\n\n인자:\n${args.join('\n')}` : '\n\n인자 없음 (모든 default 사용).';
+    const params = new URLSearchParams();
+    if (body.userId) params.set('user_id', body.userId);
+    if (body.status) params.set('status', body.status);
+    if (typeof body.limit === 'number') params.set('limit', String(body.limit));
+    if (typeof body.offset === 'number') params.set('offset', String(body.offset));
 
-    const prompt = `심사숙고 도구 \`list_analysis_jobs\` 을 정확히 한 번만 호출하세요. 다른 도구는 호출하지 마세요.${argsBlock}
+    const res = await fetch(`${BACKEND_URL}/api/jobs?${params}`, {
+      cache: 'no-store',
+    });
 
-도구 호출 후 추가 설명 없이 "완료"라고만 답하세요.`;
-    const result = await callMCPTool('list_analysis_jobs', prompt);
-    return NextResponse.json(result);
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      return NextResponse.json(
+        { error: `Backend ${res.status}: ${text.slice(0, 200)}` },
+        { status: 502 }
+      );
+    }
+
+    return NextResponse.json(await res.json());
   } catch (err) {
-    const status = err instanceof MCPCallError ? err.statusCode : 500;
-    const message = err instanceof Error ? err.message : 'unknown error';
-    return NextResponse.json({ error: message }, { status });
+    const message = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
