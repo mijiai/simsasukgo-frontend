@@ -8,12 +8,11 @@ import type { CollectCompanyDataResponse } from '../lib/analysis-types';
 import { riskMeta } from '../lib/risk';
 import { logError } from '../lib/log';
 
-type Tab = 'summary' | 'risk' | 'data' | 'report';
+type Tab = 'summary' | 'risk' | 'report';
 
 const TABS: Array<{ key: Tab; label: string }> = [
   { key: 'summary', label: '요약' },
   { key: 'risk',    label: '위험 분석' },
-  { key: 'data',    label: '수집 데이터' },
   { key: 'report',  label: '보고서 본문' },
 ];
 
@@ -61,9 +60,13 @@ export function ResultView({
           <SummaryTab saved={saved} pillLabel={meta.pillLabel} level={level} />
         )}
         {tab === 'risk' && (
-          <RiskTab saved={saved} level={level} pillLabel={meta.pillLabel} />
+          <RiskTab
+            saved={saved}
+            level={level}
+            pillLabel={meta.pillLabel}
+            collect={collect}
+          />
         )}
-        {tab === 'data' && <DataTab saved={saved} collect={collect} />}
         {tab === 'report' && <ReportTab mdUrl={saved.reportUrl} />}
       </div>
     </div>
@@ -142,13 +145,32 @@ function RiskTab({
   saved,
   level,
   pillLabel,
+  collect,
 }: {
   saved: SavedReport;
   level: SavedReport['riskLevel'];
   pillLabel: string;
+  collect: CollectCompanyDataResponse | null;
 }) {
   const factors = saved.keyRiskFactors || [];
-  const gaps = saved.dataGaps || [];
+
+  const newsCount = collect?.news_count ?? saved.newsCount;
+  const fmtNum = (n: number | null | undefined) => (n !== null && n !== undefined ? `${n}건` : '—');
+  const fmtBool = (b: boolean | null | undefined) =>
+    b === true ? '있음' : b === false ? '없음' : '—';
+  const years = collect?.financial_years ?? [];
+  const uploaded = collect?.uploaded_files ?? [];
+
+  const rows: Array<{ label: string; value: React.ReactNode }> = [
+    { label: '관련 뉴스',     value: newsCount !== null && newsCount !== undefined ? `${newsCount}건` : '—' },
+    { label: '추출 표',       value: fmtNum(collect?.extracted_table_count) },
+    { label: '추출 문서',     value: fmtNum(collect?.extracted_doc_count) },
+    { label: '추출 이미지',   value: fmtNum(collect?.extracted_image_count) },
+    { label: '재무 연도',     value: years.length > 0 ? years.join(', ') : '—' },
+    { label: '내부 신용 데이터', value: fmtBool(collect?.has_internal_credit_data) },
+    { label: '업로드 파일',   value: uploaded.length > 0 ? uploaded.join(', ') : '없음' },
+  ];
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -173,55 +195,15 @@ function RiskTab({
       </div>
 
       <div>
-        <div className="section-title">데이터 공백 ({gaps.length})</div>
-        {gaps.length === 0 ? (
-          <p className="muted-note">감지된 데이터 공백이 없습니다.</p>
-        ) : (
-          <div className="gap-list">
-            {gaps.map((g, i) => (
-              <span key={i} className="gap-tag">{asFactorText(g)}</span>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function DataTab({
-  saved,
-  collect,
-}: {
-  saved: SavedReport;
-  collect: CollectCompanyDataResponse | null;
-}) {
-  const newsCount = collect?.news_count ?? saved.newsCount;
-  const fmtNum = (n: number | null | undefined) => (n !== null && n !== undefined ? `${n}건` : '—');
-  const fmtBool = (b: boolean | null | undefined) =>
-    b === true ? '있음' : b === false ? '없음' : '—';
-  const years = collect?.financial_years ?? [];
-  const uploaded = collect?.uploaded_files ?? [];
-
-  const rows: Array<{ label: string; value: React.ReactNode }> = [
-    { label: '관련 뉴스',     value: newsCount !== null && newsCount !== undefined ? `${newsCount}건` : '—' },
-    { label: '추출 표',       value: fmtNum(collect?.extracted_table_count) },
-    { label: '추출 문서',     value: fmtNum(collect?.extracted_doc_count) },
-    { label: '추출 이미지',   value: fmtNum(collect?.extracted_image_count) },
-    { label: '재무 연도',     value: years.length > 0 ? years.join(', ') : '—' },
-    { label: '내부 신용 데이터', value: fmtBool(collect?.has_internal_credit_data) },
-    { label: '업로드 파일',   value: uploaded.length > 0 ? uploaded.join(', ') : '없음' },
-  ];
-
-  return (
-    <div>
-      <div className="section-title">수집 데이터</div>
-      <div style={{ marginTop: 8 }}>
-        {rows.map((r) => (
-          <div key={r.label} className="kv-row">
-            <span className="kv-label">{r.label}</span>
-            <span className="kv-value">{r.value}</span>
-          </div>
-        ))}
+        <div className="section-title">수집 데이터</div>
+        <div style={{ marginTop: 8 }}>
+          {rows.map((r) => (
+            <div key={r.label} className="kv-row">
+              <span className="kv-label">{r.label}</span>
+              <span className="kv-value">{r.value}</span>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

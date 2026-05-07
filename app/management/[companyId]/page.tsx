@@ -317,7 +317,6 @@ function SnapshotPanel({ snapshot }: { snapshot: MonitorGetLatestSnapshotRespons
   const meta = level ? riskMeta(level) : null;
   const factors = snapshot.key_risk_factors || [];
   const signals = snapshot.positive_signals || [];
-  const gaps = snapshot.data_gaps || [];
   const newsTitles = snapshot.news_top_titles || [];
 
   return (
@@ -402,17 +401,6 @@ function SnapshotPanel({ snapshot }: { snapshot: MonitorGetLatestSnapshotRespons
               </li>
             ))}
           </ol>
-        </div>
-      )}
-
-      {gaps.length > 0 && (
-        <div>
-          <div className="section-title">자료 부족 ({gaps.length})</div>
-          <div className="gap-list">
-            {gaps.map((g, i) => (
-              <span key={i} className="gap-tag">{g}</span>
-            ))}
-          </div>
         </div>
       )}
 
