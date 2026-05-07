@@ -23,8 +23,8 @@ export default function ReportPage() {
   }
 
   const isRunning = analysisRun.status === 'running';
-  const isDone = analysisRun.status === 'done';
-  const isError = analysisRun.status === 'error';
+  const isDone    = analysisRun.status === 'done';
+  const isError   = analysisRun.status === 'error';
   const saved =
     isDone && analysisRun.savedReportId
       ? savedReports.find((r) => r.id === analysisRun.savedReportId) || null
@@ -39,7 +39,13 @@ export default function ReportPage() {
         </h2>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {isDone && saved?.docxUrl && (
-            <a className="action-btn" href={saved.docxUrl} target="_blank" rel="noopener" title="DOCX 다운로드 (7일 만료)">
+            <a
+              className="action-btn"
+              href={saved.docxUrl}
+              target="_blank"
+              rel="noopener"
+              title="DOCX 다운로드 (7일 만료)"
+            >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                 <polyline points="7 10 12 15 17 10" />
@@ -49,7 +55,13 @@ export default function ReportPage() {
             </a>
           )}
           {isDone && saved?.reportUrl && (
-            <a className="action-btn" href={saved.reportUrl} target="_blank" rel="noopener" title="Markdown 다운로드 (7일 만료)">
+            <a
+              className="action-btn"
+              href={saved.reportUrl}
+              target="_blank"
+              rel="noopener"
+              title="Markdown 다운로드 (7일 만료)"
+            >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                 <polyline points="7 10 12 15 17 10" />
@@ -67,9 +79,12 @@ export default function ReportPage() {
               보관함에서 열기
             </Link>
           )}
-          <Link href="/" className="teal-btn">
-            {isRunning ? '분석 중...' : '다른 기업 분석하기'}
-          </Link>
+          {/* 분석 중일 때는 버튼을 숨겨 불필요한 이탈 방지 */}
+          {!isRunning && (
+            <Link href="/" className="teal-btn">
+              다른 기업 분석하기
+            </Link>
+          )}
         </div>
       </div>
 
@@ -77,14 +92,18 @@ export default function ReportPage() {
         style={{
           flex: 1,
           overflowY: 'auto',
-          padding: '0 28px 28px',
           display: 'flex',
           flexDirection: 'column',
           gap: 14,
+          minHeight: 0,
         }}
       >
         {(isRunning || isError) && <ProgressView run={analysisRun} />}
-        {isDone && saved && <ResultView saved={saved} collect={collect} />}
+        {isDone && saved && (
+          <div style={{ padding: '16px 28px 28px' }}>
+            <ResultView saved={saved} collect={collect} />
+          </div>
+        )}
       </div>
     </main>
   );
