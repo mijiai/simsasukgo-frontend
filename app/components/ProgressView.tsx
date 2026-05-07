@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import type { AnalysisRun } from '../lib/state';
 
 const STEP_CONFIG: Record<string, { emoji: string; label: string }> = {
@@ -39,9 +40,13 @@ export function ProgressView({ run }: { run: AnalysisRun }) {
           gap: 14,
         }}
       >
-        <span style={{ fontSize: 52, lineHeight: 1 }}>
-          {hasError ? '⚠️' : '🔍'}
-        </span>
+        {hasError ? (
+          <span style={{ fontSize: 52, lineHeight: 1 }}>⚠️</span>
+        ) : (
+          <div style={{ animation: 'ddokdi-float 3.2s ease-in-out infinite' }}>
+            <Image src="/ddokdi.png" alt="뚝디" width={170} height={170} style={{ objectFit: 'contain' }} />
+          </div>
+        )}
         <h2
           style={{
             fontSize: 22,
