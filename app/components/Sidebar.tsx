@@ -80,7 +80,7 @@ export function Sidebar() {
           );
         })}
       </nav>
-      <div className="sidebar-footer">MIZiAi</div>
+      <div className="sidebar-footer">MiZiAi</div>
     </aside>
   );
 }

@@ -65,6 +65,7 @@ body {
   color: var(--text-secondary); transition: all 0.18s;
   white-space: nowrap; background: none; border: none;
   font-family: inherit; width: 100%; text-align: left;
+  text-decoration: none;
 }
 .nav-item:hover, .nav-item.active { background: var(--teal-light); color: var(--teal); }
 .nav-item svg { width: 17px; height: 17px; flex-shrink: 0; }
@@ -82,7 +83,7 @@ body {
 
 .topbar {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 18px 28px 0; flex-shrink: 0;
+  padding: 18px 28px 16px; flex-shrink: 0;
 }
 .topbar-title { font-size: 20px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.3px; }
 
