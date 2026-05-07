@@ -83,13 +83,12 @@ export function HomeForm() {
         <Image
           src="/dandi.png"
           alt="단디"
-          width={230}
-          height={230}
+          width={280}
+          height={280}
           priority
           style={{
-            width: 'clamp(180px, 16vh, 230px)',
-            height: 'clamp(180px, 16vh, 230px)',
-            objectFit: 'contain',
+            width: '280px',
+            height: '280px',
           }}
         />
       </div>

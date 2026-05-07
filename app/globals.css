@@ -1,4 +1,5 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+a { text-decoration: none; color: inherit; }
 
 :root {
   --teal: #00C4A9;
@@ -146,6 +147,11 @@ body {
 @keyframes float {
   0%, 100% { transform: translateY(0px); }
   50% { transform: translateY(-12px); }
+}
+@keyframes ddokdi-float {
+  0%   { transform: translateY(0) rotate(-2deg); }
+  50%  { transform: translateY(-10px) rotate(2deg); }
+  100% { transform: translateY(0) rotate(-2deg); }
 }
 
 /* ── Scrollbars ── */
@@ -333,7 +339,7 @@ body {
 .factor-bullet {
   flex-shrink: 0;
   width: 22px; height: 22px;
-  background: var(--teal); color: white;
+  background: var(--risk-crit); color: white;
   border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   font-size: 11.5px; font-weight: 700;
@@ -724,7 +730,7 @@ body {
   margin: 0 0 14px;
 }
 .md-prose pre code { background: transparent; padding: 0; font-size: 13px; }
-.md-prose a { color: var(--teal); text-decoration: underline; }
+.md-prose a { color: var(--teal); }
 .md-prose a:hover { color: var(--teal-hover); }
 .md-prose hr {
   border: none; border-top: 1px solid var(--border);
